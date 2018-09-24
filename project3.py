@@ -30,10 +30,13 @@ print(df.tmt.max())
 print(df.tno.max())
 
 #quarter is an important feature
-print(df.groupby(by='Quarter').median())
+
 #biggest fish haul
 print(df.iloc[df.tmt.idxmax()])
 
+#timeline of year
+df_group = (df.groupby(by='Year').median())
+df_group.plot( y=["tno"])
 
 
 
