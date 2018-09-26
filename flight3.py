@@ -50,4 +50,46 @@ mn.matrix(df)
 #Remove the missing data
 df.dropna(inplace=True)
 df.count()
+print(df.shape)
+df.dtypes
 df.head()
+
+
+
+#see explained variance
+import numpy as np
+def plot_explained_variance(pca):
+    import plotly
+    from plotly.graph_objs import Bar, Line
+    from plotly.graph_objs import Scatter, Layout
+    from plotly.graph_objs.scatter import Marker
+    from plotly.graph_objs.layout import XAxis, YAxis
+    plotly.offline.init_notebook_mode() # run at the start of every notebook
+
+    explained_var = pca.explained_variance_ratio_
+    cum_var_exp = np.cumsum(explained_var)
+
+    plotly.offline.iplot({
+        "data": [Bar(y=explained_var, name='individual explained variance'),
+                 Scatter(y=cum_var_exp, name='cumulative explained variance')
+            ],
+        "layout": Layout(xaxis=XAxis(title='Principal components'), yaxis=YAxis(title='Explained variance ratio'))
+    })
+
+features = ['Year','Quarter','Month' ,'DayofMonth','DayOfWeek','DepDelay','ActualElapsedTime']
+
+
+from sklearn.preprocessing import StandardScaler
+
+# Separating out the features
+x = df.loc[:, features].values
+# Standardizing the features
+x = StandardScaler().fit_transform(x)
+
+from sklearn.decomposition import PCA
+
+pca = PCA(n_components=7)
+X_pca = pca.fit(x)
+plot_explained_variance(pca)
+
+#interestingly, year and quarter have no explaination of variation and can be removed; this mean the flight delayis not impacted by year and quarter at all
