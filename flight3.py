@@ -14,7 +14,7 @@ print('Pandas:', pd.__version__)
 print('Numpy:',np.__version__)
 
 #Remove attributes that are not useful for us
-for col in ['Year','Quarter','Month','monthname','DayofMonth','DayOfWeek','TailNum','FlightNum','OriginAirportID',
+for col in ['TailNum','FlightNum','OriginAirportID',
            'OriginCityName','OriginState','OriginStateName','DestAirportID','DestCityName','DestState','DestStateName','CRSDepTime',
            'DepDelayMinutes','TaxiIn','TaxiOut','CRSArrTime','ArrTime','ArrDelay','ArrDelayMinutes','ArrDelayGroup','ATimeBlk','CancellationReason',
             'Diverted', 'AirTime','CarrierDelay','WeatherDelay','NASDelay','SecurityDelay','LateAircraftDelay','FirstDepTime1','FirstDepTime2',
