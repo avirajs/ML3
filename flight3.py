@@ -100,6 +100,7 @@ y = columns
 #one hot encode airline
 temp_df = pd.get_dummies(cleaned_df.airline,prefix='airline')
 cleaned_df = pd.concat((cleaned_df,temp_df),axis=1)
+
 if 'airline' in cleaned_df:
     del cleaned_df['airline'] # get rid of the original category as it is now one-hot encoded
 #cleaned_df.head()
@@ -143,7 +144,7 @@ print(y)
 # to use the cross validation object in scikit learn, we need to grab an instance
 #    of the object and set it up. This object will be able to split our data into
 #    training and testing splits
-num_cv_iterations = 3
+num_cv_iterations = 1
 num_instances = len(y)
 cv_object = ShuffleSplit(
                          n_splits=num_cv_iterations,
@@ -203,6 +204,7 @@ class BinaryLogisticRegressionBase:
 #inherit from base class
 # from last time, our logistic regression algorithm is given by (including everything we previously had):
 from scipy.special import expit
+from numpy.linalg import pinv
 class BinaryLogisticRegression:
     def __init__(self, eta, iterations=20, C=0.001, optChoice='steepest'):
         self.eta = eta
@@ -346,7 +348,9 @@ class LogisticRegression:
         return np.argmax(self.predict_proba(X),axis=1) # take argmax along row
 
 #Test
-lr_clf = LogisticRegression(eta=0.1) # get object
+lr_steep = LogisticRegression(eta=0.1) # get object
+lr_shco = LogisticRegression(eta=0.1,iterations=1500,optChoice = 'stochastic') # get object
+lr_nh = LogisticRegression(eta=0.1,iterations=1, optChoice = 'newtonHessian')
 iter_num=0
 # the indices are the rows used for training and testing in each iteration
 for train_indices, test_indices in cv_object.split(X,y):
@@ -358,22 +362,36 @@ for train_indices, test_indices in cv_object.split(X,y):
 
     X_test = X[test_indices]
     y_test = y[test_indices]
-    lr_clf.fit(X_train,y_train)  # train object
-    y_hat = lr_clf.predict(X_test) # get test set precitions
 
-    # now let's get the accuracy and confusion matrix for this iterations of training/testing
+    lr_steep.fit(X_train,y_train)  # train object
+    y_hat = lr_steep.predict(X_test) # get test set precitions
     acc = mt.accuracy_score(y_test,y_hat)
     conf = mt.confusion_matrix(y_test,y_hat)
-    print("====Iteration",iter_num," ====")
+    print("====Steepest====")
     print("accuracy", acc )
     print("confusion matrix\n",conf)
-    iter_num+=1
+
+    lr_shco.fit(X_train,y_train)  # train object
+    y_hat = lr_shco.predict(X_test) # get test set precitions
+    acc = mt.accuracy_score(y_test,y_hat)
+    conf = mt.confusion_matrix(y_test,y_hat)
+    print("====Stochastic====")
+    print("accuracy", acc )
+    print("confusion matrix\n",conf)
+
+    lr_nh.fit(X_train,y_train)  # train object
+    y_hat = lr_nh.predict(X_test) # get test set precitions
+    acc = mt.accuracy_score(y_test,y_hat)
+    conf = mt.confusion_matrix(y_test,y_hat)
+    print("====NewtonHessian====")
+    print("accuracy", acc )
+    print("confusion matrix\n",conf)
+
 
 from sklearn.linear_model import LogisticRegression as SKLogisticRegression
 from sklearn.metrics import accuracy_score
 lr_sk = SKLogisticRegression() # all params default
 
 lr_sk.fit(X,y)
-print(np.hstack((lr_sk.intercept_[:,np.newaxis],lr_sk.coef_)))
 yhat = lr_sk.predict(X)
 print('Accuracy of: ',accuracy_score(y,yhat))
