@@ -93,3 +93,155 @@ X_pca = pca.fit(x)
 plot_explained_variance(pca)
 
 #interestingly, year and quarter have no explaination of variation and can be removed; this mean the flight delayis not impacted by year and quarter at all
+
+
+temp_df = pd.get_dummies(df.airline,prefix='airline')
+df = pd.concat((df,temp_df),axis=1)
+df.head()
+
+
+
+
+
+# perform one-hot encoding of the categorical data "embarked"
+tmp_df = pd.get_dummies(df_imputed.Embarked,prefix='Embarked')
+df_imputed = pd.concat((df_imputed,tmp_df),axis=1) # add back into the dataframe
+
+# replace the current Sex atribute with something slightly more intuitive and readable
+df_imputed['IsMale'] = df_imputed.Sex=='male'
+df_imputed.IsMale = df_imputed.IsMale.astype(np.int)
+
+# Now let's clean up the dataset
+if 'Sex' in df_imputed:
+    del df_imputed['Sex'] # if 'Sex' column still exists, delete it (as we created an ismale column)
+
+if 'Embarked' in df_imputed:
+    del df_imputed['Embarked'] # get reid of the original category as it is now one-hot encoded
+
+
+
+
+
+
+
+
+
+
+
+
+
+import numpy as np
+class BinaryLogisticRegressionBase:
+    # private:
+    def __init__(self, eta, iterations=20):
+        self.eta = eta
+        self.iters = iterations
+        # internally we will store the weights as self.w_ to keep with sklearn conventions
+
+    def __str__(self):
+        return 'Base Binary Logistic Regression Object, Not Trainable'
+
+    # convenience, private and static:
+    @staticmethod
+    def _sigmoid(theta):
+        return 1/(1+np.exp(-theta))
+
+    @staticmethod
+    def _add_bias(X):
+        return np.hstack((np.ones((X.shape[0],1)),X)) # add bias term
+
+    # public:
+    def predict_proba(self,X,add_bias=True):
+        # add bias term if requested
+        Xb = self._add_bias(X) if add_bias else X
+        return self._sigmoid(Xb @ self.w_) # return the probability y=1
+
+    def predict(self,X):
+        return (self.predict_proba(X)>0.5) #return the actual prediction
+
+# inherit from base class
+class BinaryLogisticRegression(BinaryLogisticRegressionBase):
+    #private:
+    def __str__(self):
+        if(hasattr(self,'w_')):
+            return 'Binary Logistic Regression Object with coefficients:\n'+ str(self.w_) # is we have trained the object
+        else:
+            return 'Untrained Binary Logistic Regression Object'
+
+    def _get_gradient(self,X,y):
+        # programming \sum_i (yi-g(xi))xi
+        gradient = np.zeros(self.w_.shape) # set gradient to zero
+        for (xi,yi) in zip(X,y):
+            # the actual update inside of sum
+            gradi = (yi - self.predict_proba(xi,add_bias=False))*xi
+            # reshape to be column vector and add to gradient
+            gradient += gradi.reshape(self.w_.shape)
+
+        return gradient/float(len(y))
+
+    # public:
+    def fit(self, X, y):
+        Xb = self._add_bias(X) # add bias term
+        num_samples, num_features = Xb.shape
+
+        self.w_ = np.zeros((num_features,1)) # init weight vector to zeros
+
+        # for as many as the max iterations
+        for _ in range(self.iters):
+            gradient = self._get_gradient(Xb,y)
+            self.w_ += gradient*self.eta # multiply by learning rate
+
+import numpy as np
+from scipy.special import expit
+
+class VectorBinaryLogisticRegression(BinaryLogisticRegression):
+    # inherit from our previous class to get same functionality
+    @staticmethod
+    def _sigmoid(theta):
+        # increase stability, redefine sigmoid operation
+        return expit(theta) #1/(1+np.exp(-theta))
+
+    # but overwrite the gradient calculation
+    def _get_gradient(self,X,y):
+        ydiff = y-self.predict_proba(X,add_bias=False).ravel() # get y difference
+        gradient = np.mean(X * ydiff[:,np.newaxis], axis=0) # make ydiff a column vector and multiply through
+        return gradient.reshape(self.w_.shape)
+
+class LogisticRegression:
+    def __init__(self, eta, iterations=20):
+        self.eta = eta
+        self.iters = iterations
+        # internally we will store the weights as self.w_ to keep with sklearn conventions
+
+    def __str__(self):
+        if(hasattr(self,'w_')):
+            return 'MultiClass Logistic Regression Object with coefficients:\n'+ str(self.w_) # is we have trained the object
+        else:
+            return 'Untrained MultiClass Logistic Regression Object'
+
+    def fit(self,X,y):
+        num_samples, num_features = X.shape
+        self.unique_ = np.unique(y) # get each unique class value
+        num_unique_classes = len(self.unique_)
+        self.classifiers_ = [] # will fill this array with binary classifiers
+
+        for i,yval in enumerate(self.unique_): # for each unique value
+            y_binary = y==yval # create a binary problem
+            # train the binary classifier for this class
+            blr = VectorBinaryLogisticRegression(self.eta,self.iters)
+            blr.fit(X,y_binary)
+            # add the trained classifier to the list
+            self.classifiers_.append(blr)
+
+        # save all the weights into one matrix, separate column for each class
+        self.w_ = np.hstack([x.w_ for x in self.classifiers_]).T
+
+    def predict_proba(self,X):
+        probs = []
+        for blr in self.classifiers_:
+            probs.append(blr.predict_proba(X)) # get probability for each classifier
+
+        return np.hstack(probs) # make into single matrix
+
+    def predict(self,X):
+        return np.argmax(self.predict_proba(X),axis=1) # take argmax along row
