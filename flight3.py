@@ -134,17 +134,94 @@ if 'DepDelayGroup' in cleaned_df:
     del cleaned_df['DepDelayGroup'] # get rid of the original category as it is now one-hot encoded
 cleaned_df.head()
 # create training and testing vars
-y_train, y_test, X_train, X_test = train_test_split(cleaned_df, y, test_size=0.2)
+##y_train, y_test, X_train, X_test = train_test_split(cleaned_df, y, test_size=0.2)
 #remove label from training dataset
-X_train = X_train.drop(['DepDelayGroup'], axis=1)
-print(X_train.shape)
-print(X_test.shape)
+#X_train = X_train.drop(['DepDelayGroup'], axis=1)
+#print(X_train.shape)
+#print(X_test.shape)
+from sklearn.model_selection import ShuffleSplit
 
+# we want to predict the X and y data as follows:
+if 'DepDelayGroupA' in cleaned_df:
+    y = cleaned_df['DepDelayGroupA'].values # get the labels we want
+    del cleaned_df['DepDelayGroupA'] # get rid of the class label
+    norm_features = ['Month','DayofMonth','DayOfWeek','ActualElapsedTime','RealDepTime' ]
+    cleaned_df[norm_features] = (cleaned_df[norm_features]-cleaned_df[norm_features].mean()) / cleaned_df[norm_features].std()
+    X = cleaned_df.values # use everything else to predict!
+
+    ## X and y are now numpy matrices, by calling 'values' on the pandas data frames we
+    #    have converted them into simple matrices to use with scikit learn
+print(X)
+print(y)
+# to use the cross validation object in scikit learn, we need to grab an instance
+#    of the object and set it up. This object will be able to split our data into
+#    training and testing splits
+num_cv_iterations = 3
+num_instances = len(y)
+cv_object = ShuffleSplit(
+                         n_splits=num_cv_iterations,
+                         test_size  = 0.2)
+
+print(cv_object)
 
 # divide into testing and training
 # a ration of 80:20 would be great for our dataset because it is neither too small nor too bigself.
 # an average dataset like this one would not need more than 20% of data as testing because 362 is already enough to capture most of the variation
 #  But also since our data is not computationally expensive the test data does not need to be less than 20% either
+
+from sklearn import metrics as mt
+
+# first we create a reusable logisitic regression object
+#   here we can setup the object with different learning parameters and constants
+#lr_clf = RegularizedLogisticRegression(eta=0.1,iterations=2000) # get object
+
+# now we can use the cv_object that we setup before to iterate through the
+#    different training and testing sets. Each time we will reuse the logisitic regression
+#    object, but it gets trained on different data each time we use it.
+
+iter_num=0
+# the indices are the rows used for training and testing in each iteration
+for train_indices, test_indices in cv_object.split(X,y):
+    # I will create new variables here so that it is more obvious what
+    # the code is doing (you can compact this syntax and avoid duplicating memory,
+    # but it makes this code less readable)
+    X_train = X[train_indices]
+    y_train = y[train_indices]
+
+    X_test = X[test_indices]
+    y_test = y[test_indices]
+
+    print(X_train)
+    #lr_clf.fit(X_train,y_train)  # train object
+    #y_hat = lr_clf.predict(X_test) # get test set precitions
+
+    # now let's get the accuracy and confusion matrix for this iterations of training/testing
+    #acc = mt.accuracy_score(y_test,y_hat)
+    #conf = mt.confusion_matrix(y_test,y_hat)
+    #print("====Iteration",iter_num," ====")
+    #print("accuracy", acc )
+    #print("confusion matrix\n",conf)
+    #iter_num+=1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
