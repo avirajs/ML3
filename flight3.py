@@ -284,9 +284,10 @@ class VectorBinaryLogisticRegression(BinaryLogisticRegression):
 
 #Logistic Regression
 class LogisticRegression:
-    def __init__(self, eta, iterations=20, optChoice):
+    def __init__(self, eta, iterations=20, C=0.001, optChoice='steepest'):
         self.eta = eta
         self.iters = iterations
+        self.C = C
         self.optChoice = optChoice
         # internally we will store the weights as self.w_ to keep with sklearn conventions
 
