@@ -94,39 +94,57 @@ plot_explained_variance(pca)
 
 #interestingly, year and quarter have no explaination of variation and can be removed; this mean the flight delayis not impacted by year and quarter at all
 
+import datetime
+import time
 
-temp_df = pd.get_dummies(df.airline,prefix='airline')
-df = pd.concat((df,temp_df),axis=1)
-df.head()
-
-
-
-
-
-# perform one-hot encoding of the categorical data "embarked"
-tmp_df = pd.get_dummies(df_imputed.Embarked,prefix='Embarked')
-df_imputed = pd.concat((df_imputed,tmp_df),axis=1) # add back into the dataframe
-
-# replace the current Sex atribute with something slightly more intuitive and readable
-df_imputed['IsMale'] = df_imputed.Sex=='male'
-df_imputed.IsMale = df_imputed.IsMale.astype(np.int)
-
-# Now let's clean up the dataset
-if 'Sex' in df_imputed:
-    del df_imputed['Sex'] # if 'Sex' column still exists, delete it (as we created an ismale column)
-
-if 'Embarked' in df_imputed:
-    del df_imputed['Embarked'] # get reid of the original category as it is now one-hot encoded
+def time_converter(t):
+    x = time.strptime(t.split(',')[0],'%H:%M')
+    return int(datetime.timedelta(hours=x.tm_hour,minutes=x.tm_min,seconds=x.tm_sec).total_seconds())
 
 
 
+df["RealDepTime"] = df.apply( lambda row: time_converter(row.DepTime), axis=1)
 
 
+cleaned_df = df[['Month' ,'airline','DayofMonth','DayOfWeek', 'ActualElapsedTime', 'DepDelayGroup','RealDepTime']]
+columns = cleaned_df # Declare the columns names
+y = columns
+
+#one hot encode airline
+temp_df = pd.get_dummies(cleaned_df.airline,prefix='airline')
+cleaned_df = pd.concat((cleaned_df,temp_df),axis=1)
+if 'airline' in cleaned_df:
+    del cleaned_df['airline'] # get rid of the original category as it is now one-hot encoded
+#cleaned_df.head()
+#change dep delay categories to numberical data
+from sklearn.preprocessing import LabelEncoder
+number = LabelEncoder()
+cleaned_df['DepDelayGroupA'] = number.fit_transform(cleaned_df['DepDelayGroup'].astype('str'))
+#cleaned_df.head()
+
+print(cleaned_df['DepDelayGroupA'].nunique())
+print(df['DepDelayGroup'].nunique())
+
+#show the value that coorsponds to original groups
+comp_df = cleaned_df[['DepDelayGroup' ,'DepDelayGroupA']]
+print(comp_df.drop_duplicates())
+
+#drop original category in cleaned_df
+if 'DepDelayGroup' in cleaned_df:
+    del cleaned_df['DepDelayGroup'] # get rid of the original category as it is now one-hot encoded
+cleaned_df.head()
+# create training and testing vars
+y_train, y_test, X_train, X_test = train_test_split(cleaned_df, y, test_size=0.2)
+#remove label from training dataset
+X_train = X_train.drop(['DepDelayGroup'], axis=1)
+print(X_train.shape)
+print(X_test.shape)
 
 
-
-
-
+# divide into testing and training
+# a ration of 80:20 would be great for our dataset because it is neither too small nor too bigself.
+# an average dataset like this one would not need more than 20% of data as testing because 362 is already enough to capture most of the variation
+#  But also since our data is not computationally expensive the test data does not need to be less than 20% either
 
 
 
