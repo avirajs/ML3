@@ -147,13 +147,14 @@ print(X_test.shape)
 #  But also since our data is not computationally expensive the test data does not need to be less than 20% either
 
 
-
+#BLR base
 import numpy as np
 class BinaryLogisticRegressionBase:
     # private:
-    def __init__(self, eta, iterations=20):
+    def __init__(self, eta, iterations=20, optChoice):
         self.eta = eta
         self.iters = iterations
+        self.optChoice = optChoice
         # internally we will store the weights as self.w_ to keep with sklearn conventions
 
     def __str__(self):
@@ -176,26 +177,67 @@ class BinaryLogisticRegressionBase:
 
     def predict(self,X):
         return (self.predict_proba(X)>0.5) #return the actual prediction
+#
 
-# inherit from base class
-class BinaryLogisticRegression(BinaryLogisticRegressionBase):
-    #private:
+# BLR
+#inherit from base class
+# from last time, our logistic regression algorithm is given by (including everything we previously had):
+class BinaryLogisticRegression:
+    def __init__(self, eta, iterations=20, C=0.001, optChoice='steepest'):
+        self.eta = eta
+        self.iters = iterations
+        self.C = C
+        self.optChoice = optChoice
+        # internally we will store the weights as self.w_ to keep with sklearn conventions
+
     def __str__(self):
         if(hasattr(self,'w_')):
             return 'Binary Logistic Regression Object with coefficients:\n'+ str(self.w_) # is we have trained the object
         else:
             return 'Untrained Binary Logistic Regression Object'
 
-    def _get_gradient(self,X,y):
-        # programming \sum_i (yi-g(xi))xi
-        gradient = np.zeros(self.w_.shape) # set gradient to zero
-        for (xi,yi) in zip(X,y):
-            # the actual update inside of sum
-            gradi = (yi - self.predict_proba(xi,add_bias=False))*xi
-            # reshape to be column vector and add to gradient
-            gradient += gradi.reshape(self.w_.shape)
+    # convenience, private:
+    @staticmethod
+    def _add_bias(X):
+        return np.hstack((np.ones((X.shape[0],1)),X)) # add bias term
 
-        return gradient/float(len(y))
+    @staticmethod
+    def _sigmoid(theta):
+        # increase stability, redefine sigmoid operation
+        return expit(theta) #1/(1+np.exp(-theta))
+
+    # vectorized gradient calculation with regularization using L2 Norm
+    def _get_gradient(self,X,y):
+        ydiff = y-self.predict_proba(X,add_bias=False).ravel() # get y difference
+        gradient = np.mean(X * ydiff[:,np.newaxis], axis=0) # make ydiff a column vector and multiply through
+
+        gradient = gradient.reshape(self.w_.shape)
+        gradient[1:] += -2 * self.w_[1:] * self.C
+
+        return gradient
+
+    # public:
+    def predict_proba(self,X,add_bias=True):
+        # add bias term if requested
+        Xb = self._add_bias(X) if add_bias else X
+        return self._sigmoid(Xb @ self.w_) # return the probability y=1
+
+    def predict(self,X):
+        return (self.predict_proba(X)>0.5) #return the actual prediction
+
+
+    def fit(self, X, y):
+        Xb = self._add_bias(X) # add bias term
+        num_samples, num_features = Xb.shape
+
+        self.w_ = np.zeros((num_features,1)) # init weight vector to zeros
+
+        # for as many as the max iterations
+        for _ in range(self.iters):
+            gradient = self._get_gradient(Xb,y)
+            self.w_ += gradient*self.eta # multiply by learning rate
+
+
 
     # public:
     def fit(self, X, y):
@@ -209,9 +251,7 @@ class BinaryLogisticRegression(BinaryLogisticRegressionBase):
             gradient = self._get_gradient(Xb,y)
             self.w_ += gradient*self.eta # multiply by learning rate
 
-import numpy as np
-from scipy.special import expit
-
+#Vector BinaryLogisticRegression
 class VectorBinaryLogisticRegression(BinaryLogisticRegression):
     # inherit from our previous class to get same functionality
     @staticmethod
@@ -221,14 +261,33 @@ class VectorBinaryLogisticRegression(BinaryLogisticRegression):
 
     # but overwrite the gradient calculation
     def _get_gradient(self,X,y):
-        ydiff = y-self.predict_proba(X,add_bias=False).ravel() # get y difference
-        gradient = np.mean(X * ydiff[:,np.newaxis], axis=0) # make ydiff a column vector and multiply through
-        return gradient.reshape(self.w_.shape)
+        if self.optChoice == 'steepest':
+            ydiff = y-self.predict_proba(X,add_bias=False).ravel() # get y difference
+            gradient = np.mean(X * ydiff[:,np.newaxis], axis=0) # make ydiff a column vector and multiply through
+            return gradient.reshape(self.w_.shape)
+        if self.optChoice == 'stochastic':
+            # stochastic gradient calculation
+            idx = int(np.random.rand()*len(y)) # grab random instance
+            ydiff = y[idx]-self.predict_proba(X[idx],add_bias=False) # get y difference (now scalar)
+            gradient = X[idx] * ydiff[:,np.newaxis] # make ydiff a column vector and multiply through
+            gradient = gradient.reshape(self.w_.shape)
+            gradient[1:] += -2 * self.w_[1:] * self.C
+            return gradient
+        if self.optChoice == 'newtonHessian':
+            g = self.predict_proba(X,add_bias=False).ravel() # get sigmoid value for all classes
+            hessian = X.T @ np.diag(g*(1-g)) @ X - 2 * self.C # calculate the hessian
+            ydiff = y-g # get y difference
+            gradient = np.sum(X * ydiff[:,np.newaxis], axis=0) # make ydiff a column vector and multiply through
+            gradient = gradient.reshape(self.w_.shape)
+            gradient[1:] += -2 * self.w_[1:] * self.C
+            return pinv(hessian) @ gradient
 
+#Logistic Regression
 class LogisticRegression:
-    def __init__(self, eta, iterations=20):
+    def __init__(self, eta, iterations=20, optChoice):
         self.eta = eta
         self.iters = iterations
+        self.optChoice = optChoice
         # internally we will store the weights as self.w_ to keep with sklearn conventions
 
     def __str__(self):
@@ -246,7 +305,7 @@ class LogisticRegression:
         for i,yval in enumerate(self.unique_): # for each unique value
             y_binary = y==yval # create a binary problem
             # train the binary classifier for this class
-            blr = VectorBinaryLogisticRegression(self.eta,self.iters)
+            blr = VectorBinaryLogisticRegression(self.eta,self.iters,self.optChoice)
             blr.fit(X,y_binary)
             # add the trained classifier to the list
             self.classifiers_.append(blr)
