@@ -25,21 +25,7 @@ for col in ['TailNum','FlightNum','OriginAirportID',
 
 print(df.dtypes)
 
-''' Explanation
 
-The data we are focusing on is mainly flight delay time data so we chose to keep the colums of:
-* dayname (the day of the week of the flight) -----------------------> ordinal
-* airline (the airline of the flight)--------------------------------> nominal
-* Origin (origin airport code of the flight)-------------------------> nominal
-* Dest (destination airport code of the flight)----------------------> nominal
-* DepTime (departure time of the flight)-----------------------------> ratio
-* DepDelay (delay of the flight departure in minutes)----------------> interval
-* DepDelayGroup (delay of the flight departure grouped by minutes)---> ordinal
-* DTimeBlk (delay of the flight grouped by hours)--------------------> ordinal
-* ActualElapsedTime (flight time in the air)-------------------------> ratio
-* Distance (distance the flight travelled)---------------------------> interval
-* DistGroup (distance the flight travelled grouped by miles----------> ordinal
-'''
 print(df.info(verbose=True, null_counts=True))
 
 #Figure out what data is missing
@@ -50,6 +36,7 @@ mn.matrix(df)
 #Remove the missing data
 df.dropna(inplace=True)
 df.count()
+
 print(df.shape)
 df.dtypes
 df.head()
@@ -179,56 +166,12 @@ from sklearn import metrics as mt
 #    different training and testing sets. Each time we will reuse the logisitic regression
 #    object, but it gets trained on different data each time we use it.
 
-iter_num=0
-# the indices are the rows used for training and testing in each iteration
-for train_indices, test_indices in cv_object.split(X,y):
-    # I will create new variables here so that it is more obvious what
-    # the code is doing (you can compact this syntax and avoid duplicating memory,
-    # but it makes this code less readable)
-    X_train = X[train_indices]
-    y_train = y[train_indices]
-
-    X_test = X[test_indices]
-    y_test = y[test_indices]
-
-    print(X_train)
-    #lr_clf.fit(X_train,y_train)  # train object
-    #y_hat = lr_clf.predict(X_test) # get test set precitions
-
-    # now let's get the accuracy and confusion matrix for this iterations of training/testing
-    #acc = mt.accuracy_score(y_test,y_hat)
-    #conf = mt.confusion_matrix(y_test,y_hat)
-    #print("====Iteration",iter_num," ====")
-    #print("accuracy", acc )
-    #print("confusion matrix\n",conf)
-    #iter_num+=1
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 #BLR base
 import numpy as np
 class BinaryLogisticRegressionBase:
     # private:
-    def __init__(self, eta, iterations=20, optChoice):
+    def __init__(self, eta, iterations=20, optChoice = 'steepest'):
         self.eta = eta
         self.iters = iterations
         self.optChoice = optChoice
@@ -259,6 +202,7 @@ class BinaryLogisticRegressionBase:
 # BLR
 #inherit from base class
 # from last time, our logistic regression algorithm is given by (including everything we previously had):
+from scipy.special import expit
 class BinaryLogisticRegression:
     def __init__(self, eta, iterations=20, C=0.001, optChoice='steepest'):
         self.eta = eta
@@ -400,3 +344,27 @@ class LogisticRegression:
 
     def predict(self,X):
         return np.argmax(self.predict_proba(X),axis=1) # take argmax along row
+
+#Test
+lr_clf = LogisticRegression(eta=0.1) # get object
+iter_num=0
+# the indices are the rows used for training and testing in each iteration
+for train_indices, test_indices in cv_object.split(X,y):
+    # I will create new variables here so that it is more obvious what
+    # the code is doing (you can compact this syntax and avoid duplicating memory,
+    # but it makes this code less readable)
+    X_train = X[train_indices]
+    y_train = y[train_indices]
+
+    X_test = X[test_indices]
+    y_test = y[test_indices]
+    lr_clf.fit(X_train,y_train)  # train object
+    y_hat = lr_clf.predict(X_test) # get test set precitions
+
+    # now let's get the accuracy and confusion matrix for this iterations of training/testing
+    acc = mt.accuracy_score(y_test,y_hat)
+    conf = mt.confusion_matrix(y_test,y_hat)
+    print("====Iteration",iter_num," ====")
+    print("accuracy", acc )
+    print("confusion matrix\n",conf)
+    iter_num+=1
