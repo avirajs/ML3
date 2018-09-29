@@ -368,3 +368,12 @@ for train_indices, test_indices in cv_object.split(X,y):
     print("accuracy", acc )
     print("confusion matrix\n",conf)
     iter_num+=1
+
+from sklearn.linear_model import LogisticRegression as SKLogisticRegression
+from sklearn.metrics import accuracy_score
+lr_sk = SKLogisticRegression() # all params default
+
+lr_sk.fit(X,y)
+print(np.hstack((lr_sk.intercept_[:,np.newaxis],lr_sk.coef_)))
+yhat = lr_sk.predict(X)
+print('Accuracy of: ',accuracy_score(y,yhat))
