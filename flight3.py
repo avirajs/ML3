@@ -271,14 +271,14 @@ class BinaryLogisticRegression:
 
         return gradient/float(len(y))
 
-     def _get_gradient(self,X,y, l_choice):
+    def _get_gradient(self,X,y, l_choice):
         if l_choice == "o":
             _get_original(self, X, y)
-        else if l_choice == "l1":
+        elif l_choice == "l1":
             _l1_get_gradient(self, X, y)
-        else if l_choice == "l2":
+        elif l_choice == "l2":
             _l2_get_gradient(self, X, y)
-        else if l_choice == "both":
+        elif l_choice == "both":
             _both_get_gradient(self, X, y)
 
     # public:
@@ -301,8 +301,6 @@ class BinaryLogisticRegression:
         for _ in range(self.iters):
             gradient = self._get_gradient(Xb,y)
             self.w_ += gradient*self.eta # multiply by learning rate
-
-
 
     # public:
     def fit(self, X, y):
