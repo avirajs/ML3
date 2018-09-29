@@ -306,7 +306,7 @@ class LogisticRegression:
         for i,yval in enumerate(self.unique_): # for each unique value
             y_binary = y==yval # create a binary problem
             # train the binary classifier for this class
-            blr = VectorBinaryLogisticRegression(self.eta,self.iters,self.optChoice)
+            blr = VectorBinaryLogisticRegression(self.eta,self.iters,self.C,self.optChoice)
             blr.fit(X,y_binary)
             # add the trained classifier to the list
             self.classifiers_.append(blr)
