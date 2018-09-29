@@ -206,11 +206,12 @@ class BinaryLogisticRegressionBase:
 from scipy.special import expit
 from numpy.linalg import pinv
 class BinaryLogisticRegression:
-    def __init__(self, eta, iterations=20, C=0.001, optChoice='steepest'):
+    def __init__(self, eta, iterations=20, C=0.001, optChoice='steepest', reg_choice = "o"):
         self.eta = eta
         self.iters = iterations
         self.C = C
         self.optChoice = optChoice
+        self.reg_choice = reg_choice
         # internally we will store the weights as self.w_ to keep with sklearn conventions
 
     def __str__(self):
@@ -230,7 +231,16 @@ class BinaryLogisticRegression:
         return expit(theta) #1/(1+np.exp(-theta))
 
     # vectorized gradient calculation with regularization using L2 Norm
-    def _get_gradient(self,X,y):
+    def _l1_get_gradient(self,X,y):
+        ydiff = y-self.predict_proba(X,add_bias=False).ravel() # get y difference
+        gradient = np.mean(X * ydiff[:,np.newaxis], axis=0) # make ydiff a column vector and multiply through
+
+        gradient = gradient.reshape(self.w_.shape)
+        gradient[1:] += -abs(self.w_[1:]) * self.C
+
+        return gradient
+
+    def _l2_get_gradient(self,X,y):
         ydiff = y-self.predict_proba(X,add_bias=False).ravel() # get y difference
         gradient = np.mean(X * ydiff[:,np.newaxis], axis=0) # make ydiff a column vector and multiply through
 
@@ -238,6 +248,38 @@ class BinaryLogisticRegression:
         gradient[1:] += -2 * self.w_[1:] * self.C
 
         return gradient
+
+        #sum of absolute values of the weights
+
+    def _both_get_gradient(self,X,y):
+        ydiff = y-self.predict_proba(X,add_bias=False).ravel() # get y difference
+        gradient = np.mean(X * ydiff[:,np.newaxis], axis=0) # make ydiff a column vector and multiply through
+
+        gradient = gradient.reshape(self.w_.shape)
+        gradient[1:] += ((-abs(self.w_[1:])) + (-2 * self.w_[1:])) * self.C
+
+        return gradient
+
+    def _get_original(self, X, y):
+        # programming \sum_i (yi-g(xi))xi
+        gradient = np.zeros(self.w_.shape) # set gradient to zero
+        for (xi,yi) in zip(X,y):
+            # the actual update inside of sum
+            gradi = (yi - self.predict_proba(xi,add_bias=False))*xi
+            # reshape to be column vector and add to gradient
+            gradient += gradi.reshape(self.w_.shape)
+
+        return gradient/float(len(y))
+
+     def _get_gradient(self,X,y, l_choice):
+        if l_choice == "o":
+            _get_original(self, X, y)
+        else if l_choice == "l1":
+            _l1_get_gradient(self, X, y)
+        else if l_choice == "l2":
+            _l2_get_gradient(self, X, y)
+        else if l_choice == "both":
+            _both_get_gradient(self, X, y)
 
     # public:
     def predict_proba(self,X,add_bias=True):
@@ -307,11 +349,12 @@ class VectorBinaryLogisticRegression(BinaryLogisticRegression):
 
 #Logistic Regression
 class LogisticRegression:
-    def __init__(self, eta, iterations=20, C=0.001, optChoice='steepest'):
+    def __init__(self, eta, iterations=20, C=0.001, optChoice='steepest', reg_choice="o"):
         self.eta = eta
         self.iters = iterations
         self.C = C
         self.optChoice = optChoice
+        self.reg_choice = reg_choice
         # internally we will store the weights as self.w_ to keep with sklearn conventions
 
     def __str__(self):
@@ -329,7 +372,7 @@ class LogisticRegression:
         for i,yval in enumerate(self.unique_): # for each unique value
             y_binary = y==yval # create a binary problem
             # train the binary classifier for this class
-            blr = VectorBinaryLogisticRegression(self.eta,self.iters,self.C,self.optChoice)
+            blr = VectorBinaryLogisticRegression(self.eta,self.iters,self.C,self.optChoice, self.reg_choice)
             blr.fit(X,y_binary)
             # add the trained classifier to the list
             self.classifiers_.append(blr)
