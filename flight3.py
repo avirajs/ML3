@@ -45,6 +45,9 @@ df.head()
 
 #see explained variance
 import numpy as np
+
+
+
 def plot_explained_variance(pca):
     import plotly
     from plotly.graph_objs import Bar, Line
@@ -370,7 +373,7 @@ class LogisticRegression:
         for i,yval in enumerate(self.unique_): # for each unique value
             y_binary = y==yval # create a binary problem
             # train the binary classifier for this class
-            blr = VectorBinaryLogisticRegression(self.eta,self.iters,self.C,self.optChoice, self.reg_choice)
+            blr = VectorBinaryLogisticRegression(self.eta,self.iters,self.C,self.optChoice, self.reg_choice,self.l_choice)
             blr.fit(X,y_binary)
             # add the trained classifier to the list
             self.classifiers_.append(blr)
@@ -389,9 +392,18 @@ class LogisticRegression:
         return np.argmax(self.predict_proba(X),axis=1) # take argmax along row
 
 #Test
-lr_steep = LogisticRegression(eta=0.1) # get object
-lr_shco = LogisticRegression(eta=0.1,iterations=1500,optChoice = 'stochastic') # get object
-lr_nh = LogisticRegression(eta=0.1,iterations=1, optChoice = 'newtonHessian')
+lr_steep0 = LogisticRegression(eta=0.1) # get object
+lr_steep1 = LogisticRegression(eta=0.1,reg_choice = "l1") # get object
+lr_steep2 = LogisticRegression(eta=0.1,reg_choice = "l2") # get object
+lr_steepb = LogisticRegression(eta=0.1,reg_choice = "both") # get object
+lr_shco0 = LogisticRegression(eta=0.1,iterations=1500,optChoice = 'stochastic')
+lr_shco1 = LogisticRegression(eta=0.1,iterations=1500,optChoice = 'stochastic',reg_choice = "l1")
+lr_shco2 = LogisticRegression(eta=0.1,iterations=1500,optChoice = 'stochastic',reg_choice = "l2")
+lr_shcob = LogisticRegression(eta=0.1,iterations=1500,optChoice = 'stochastic',reg_choice = "both")
+lr_nh0 = LogisticRegression(eta=0.1,iterations=1, optChoice = 'newtonHessian')
+lr_nh1 = LogisticRegression(eta=0.1,iterations=1, optChoice = 'newtonHessian',reg_choice = "l1")
+lr_nh2 = LogisticRegression(eta=0.1,iterations=1, optChoice = 'newtonHessian',reg_choice = "l2")
+lr_nhb = LogisticRegression(eta=0.1,iterations=1, optChoice = 'newtonHessian',reg_choice = "both")
 iter_num=0
 # the indices are the rows used for training and testing in each iteration
 for train_indices, test_indices in cv_object.split(X,y):
@@ -404,29 +416,72 @@ for train_indices, test_indices in cv_object.split(X,y):
     X_test = X[test_indices]
     y_test = y[test_indices]
 
-    lr_steep.fit(X_train,y_train)  # train object
-    y_hat = lr_steep.predict(X_test) # get test set precitions
+    lr_steep0.fit(X_train,y_train)  # train object
+    y_hat = lr_steep0.predict(X_test) # get test set precitions
     acc = mt.accuracy_score(y_test,y_hat)
-    conf = mt.confusion_matrix(y_test,y_hat)
-    print("====Steepest====")
+    print("====Steepest-Original====")
     print("accuracy", acc )
-    print("confusion matrix\n",conf)
+    lr_steep1.fit(X_train,y_train)  # train object
+    y_hat = lr_steep1.predict(X_test) # get test set precitions
+    acc = mt.accuracy_score(y_test,y_hat)
+    print("====Steepest-L1====")
+    print("accuracy", acc )
+    lr_steep2.fit(X_train,y_train)  # train object
+    y_hat = lr_steep2.predict(X_test) # get test set precitions
+    acc = mt.accuracy_score(y_test,y_hat)
+    print("====Steepest-2====")
+    print("accuracy", acc )
+    lr_steepb.fit(X_train,y_train)  # train object
+    y_hat = lr_steepb.predict(X_test) # get test set precitions
+    acc = mt.accuracy_score(y_test,y_hat)
+    print("====Steepest-Both====")
+    print("accuracy", acc )
 
-    lr_shco.fit(X_train,y_train)  # train object
-    y_hat = lr_shco.predict(X_test) # get test set precitions
-    acc = mt.accuracy_score(y_test,y_hat)
-    conf = mt.confusion_matrix(y_test,y_hat)
-    print("====Stochastic====")
-    print("accuracy", acc )
-    print("confusion matrix\n",conf)
 
-    lr_nh.fit(X_train,y_train)  # train object
-    y_hat = lr_nh.predict(X_test) # get test set precitions
+    lr_shco0.fit(X_train,y_train)  # train object
+    y_hat = lr_shco0.predict(X_test) # get test set precitions
     acc = mt.accuracy_score(y_test,y_hat)
-    conf = mt.confusion_matrix(y_test,y_hat)
-    print("====NewtonHessian====")
+    print("====Stochastic-O====")
     print("accuracy", acc )
-    print("confusion matrix\n",conf)
+    lr_shco1.fit(X_train,y_train)  # train object
+    y_hat = lr_shco1.predict(X_test) # get test set precitions
+    acc = mt.accuracy_score(y_test,y_hat)
+    print("====Stochastic-L1====")
+    print("accuracy", acc )
+    lr_shco2.fit(X_train,y_train)  # train object
+    y_hat = lr_shco2.predict(X_test) # get test set precitions
+    acc = mt.accuracy_score(y_test,y_hat)
+    print("====Stochastic-L2====")
+    print("accuracy", acc )
+    lr_shcob.fit(X_train,y_train)  # train object
+    y_hat = lr_shcob.predict(X_test) # get test set precitions
+    acc = mt.accuracy_score(y_test,y_hat)
+    print("====Stochastic-Both====")
+    print("accuracy", acc )
+
+
+    lr_nh0.fit(X_train,y_train)  # train object
+    y_hat = lr_nh0.predict(X_test) # get test set precitions
+    acc = mt.accuracy_score(y_test,y_hat)
+    print("====NewtonHessian-O====")
+    print("accuracy", acc )
+    lr_nh1.fit(X_train,y_train)  # train object
+    y_hat = lr_nh1.predict(X_test) # get test set precitions
+    acc = mt.accuracy_score(y_test,y_hat)
+    print("====NewtonHessian-L1====")
+    print("accuracy", acc )
+    lr_nh2.fit(X_train,y_train)  # train object
+    y_hat = lr_nh2.predict(X_test) # get test set precitions
+    acc = mt.accuracy_score(y_test,y_hat)
+    print("====NewtonHessian-L2====")
+    print("accuracy", acc )
+    lr_nhb.fit(X_train,y_train)  # train object
+    y_hat = lr_nhb.predict(X_test) # get test set precitions
+    acc = mt.accuracy_score(y_test,y_hat)
+    print("====NewtonHessian-both====")
+    print("accuracy", acc )
+
+
 
 
 from sklearn.linear_model import LogisticRegression as SKLogisticRegression
