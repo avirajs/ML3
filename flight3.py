@@ -3,9 +3,7 @@ import matplotlib.pyplot as plt
 import warnings
 warnings.simplefilter('ignore', DeprecationWarning)
 %matplotlib inline
-
 import missingno as mn
-
 import pandas as pd
 import numpy as np
 
@@ -45,8 +43,6 @@ df.head()
 
 #see explained variance
 import numpy as np
-
-
 
 def plot_explained_variance(pca):
     import plotly
@@ -152,9 +148,19 @@ num_instances = len(y)
 cv_object = ShuffleSplit(
                          n_splits=num_cv_iterations,
                          test_size  = 0.2)
+print( cv_object.split(X,y))
+# the indices are the rows used for training and testing in each iteration
+for train_indices, test_indices in cv_object.split(X,y):
+    # I will create new variables here so that it is more obvious what
+    # the code is doing (you can compact this syntax and avoid duplicating memory,
+    # but it makes this code less readable)
+    X_train = X[train_indices]
+    y_train = y[train_indices]
 
-print(cv_object)
+    X_test = X[test_indices]
+    y_test = y[test_indices]
 
+#explaniaiton of training split
 # divide into testing and training
 # a ration of 80:20 would be great for our dataset because it is neither too small nor too bigself.
 # an average dataset like this one would not need more than 20% of data as testing because 362 is already enough to capture most of the variation
@@ -419,29 +425,20 @@ def snoopReg(beginC, endC, stepSize, X_train, y_train,X_test,y_test, regression)
 
 
 
-# the indices are the rows used for training and testing in each iteration
-for train_indices, test_indices in cv_object.split(X,y):
-    # I will create new variables here so that it is more obvious what
-    # the code is doing (you can compact this syntax and avoid duplicating memory,
-    # but it makes this code less readable)
-    X_train = X[train_indices]
-    y_train = y[train_indices]
 
-    X_test = X[test_indices]
-    y_test = y[test_indices]
 
-    regListName = ["Steepest-Orig :", "Steepest-1 :", "Steepest-2 :", "Steepest-B :", "Stochastic-Orig: ", "Stochastic-1: ", "Stochastic-2: ", "Stochastic-B: ", "NewtonHessian-Orig: ", "NewtonHessian-1: ", "NewtonHessian-2: ", "NewtonHessian-B: "]
-    regList = ["lr_steep0", "lr_steep1", "lr_steep2", "lr_steepb", "lr_scho0", "lr_scho1", "lr_scho2", "lr_schob", "lr_nh0", "lr_nh1", "lr_nh2", "lr_nhb"]
-    cList = [0.001,1,0.01]
-    i = 0
-    for r in regList:
-        regArr = snoopReg(beginC = cList[0], endC = cList[1], stepSize = cList[2], X_train = X_train, y_train = y_train, X_test = X_test,y_test = y_test, regression = r)
-        cArr = getCArray(beginC = cList[0], endC = cList[1], stepSize = cList[2])
-        print(regListName[i])
-        print("max accuracy: " , max(regArr))
-        c_value_index = regArr.index(max(regArr))
-        print("c value: ", cArr[c_value_index])
-        i+=1
+regListName = ["Steepest-Orig :", "Steepest-1 :", "Steepest-2 :", "Steepest-B :", "Stochastic-Orig: ", "Stochastic-1: ", "Stochastic-2: ", "Stochastic-B: ", "NewtonHessian-Orig: ", "NewtonHessian-1: ", "NewtonHessian-2: ", "NewtonHessian-B: "]
+regList = ["lr_steep0", "lr_steep1", "lr_steep2", "lr_steepb", "lr_scho0", "lr_scho1", "lr_scho2", "lr_schob", "lr_nh0", "lr_nh1", "lr_nh2", "lr_nhb"]
+cList = [0.001,1,0.01]
+i = 0
+for r in regList:
+    regArr = snoopReg(beginC = cList[0], endC = cList[1], stepSize = cList[2], X_train = X_train, y_train = y_train, X_test = X_test,y_test = y_test, regression = r)
+    cArr = getCArray(beginC = cList[0], endC = cList[1], stepSize = cList[2])
+    print(regListName[i])
+    print("max accuracy: " , max(regArr))
+    c_value_index = regArr.index(max(regArr))
+    print("c value: ", cArr[c_value_index])
+    i+=1
 
 from sklearn.linear_model import LogisticRegression as SKLogisticRegression
 from sklearn.metrics import accuracy_score
