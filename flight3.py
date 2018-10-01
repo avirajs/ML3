@@ -177,37 +177,6 @@ from sklearn import metrics as mt
 #    object, but it gets trained on different data each time we use it.
 
 
-#BLR base
-import numpy as np
-class BinaryLogisticRegressionBase:
-    # private:
-    def __init__(self, eta, iterations=20, optChoice = 'steepest'):
-        self.eta = eta
-        self.iters = iterations
-        self.optChoice = optChoice
-        # internally we will store the weights as self.w_ to keep with sklearn conventions
-
-    def __str__(self):
-        return 'Base Binary Logistic Regression Object, Not Trainable'
-
-    # convenience, private and static:
-    @staticmethod
-    def _sigmoid(theta):
-        return 1/(1+np.exp(-theta))
-
-    @staticmethod
-    def _add_bias(X):
-        return np.hstack((np.ones((X.shape[0],1)),X)) # add bias term
-
-    # public:
-    def predict_proba(self,X,add_bias=True):
-        # add bias term if requested
-        Xb = self._add_bias(X) if add_bias else X
-        return self._sigmoid(Xb @ self.w_) # return the probability y=1
-
-    def predict(self,X):
-        return (self.predict_proba(X)>0.5) #return the actual prediction
-#
 
 # BLR
 #inherit from base class
