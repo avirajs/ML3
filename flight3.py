@@ -3,9 +3,7 @@ import matplotlib.pyplot as plt
 import warnings
 warnings.simplefilter('ignore', DeprecationWarning)
 %matplotlib inline
-
 import missingno as mn
-
 import pandas as pd
 import numpy as np
 
@@ -45,8 +43,6 @@ df.head()
 
 #see explained variance
 import numpy as np
-
-
 
 def plot_explained_variance(pca):
     import plotly
@@ -152,9 +148,19 @@ num_instances = len(y)
 cv_object = ShuffleSplit(
                          n_splits=num_cv_iterations,
                          test_size  = 0.2)
+print( cv_object.split(X,y))
+# the indices are the rows used for training and testing in each iteration
+for train_indices, test_indices in cv_object.split(X,y):
+    # I will create new variables here so that it is more obvious what
+    # the code is doing (you can compact this syntax and avoid duplicating memory,
+    # but it makes this code less readable)
+    X_train = X[train_indices]
+    y_train = y[train_indices]
 
-print(cv_object)
+    X_test = X[test_indices]
+    y_test = y[test_indices]
 
+#explaniaiton of training split
 # divide into testing and training
 # a ration of 80:20 would be great for our dataset because it is neither too small nor too bigself.
 # an average dataset like this one would not need more than 20% of data as testing because 362 is already enough to capture most of the variation
@@ -171,37 +177,6 @@ from sklearn import metrics as mt
 #    object, but it gets trained on different data each time we use it.
 
 
-#BLR base
-import numpy as np
-class BinaryLogisticRegressionBase:
-    # private:
-    def __init__(self, eta, iterations=20, optChoice = 'steepest'):
-        self.eta = eta
-        self.iters = iterations
-        self.optChoice = optChoice
-        # internally we will store the weights as self.w_ to keep with sklearn conventions
-
-    def __str__(self):
-        return 'Base Binary Logistic Regression Object, Not Trainable'
-
-    # convenience, private and static:
-    @staticmethod
-    def _sigmoid(theta):
-        return 1/(1+np.exp(-theta))
-
-    @staticmethod
-    def _add_bias(X):
-        return np.hstack((np.ones((X.shape[0],1)),X)) # add bias term
-
-    # public:
-    def predict_proba(self,X,add_bias=True):
-        # add bias term if requested
-        Xb = self._add_bias(X) if add_bias else X
-        return self._sigmoid(Xb @ self.w_) # return the probability y=1
-
-    def predict(self,X):
-        return (self.predict_proba(X)>0.5) #return the actual prediction
-#
 
 # BLR
 #inherit from base class
@@ -233,56 +208,6 @@ class BinaryLogisticRegression:
         # increase stability, redefine sigmoid operation
         return expit(theta) #1/(1+np.exp(-theta))
 
-    # vectorized gradient calculation with regularization using L2 Norm
-    def _l1_get_gradient(self,X,y):
-        ydiff = y-self.predict_proba(X,add_bias=False).ravel() # get y difference
-        gradient = np.mean(X * ydiff[:,np.newaxis], axis=0) # make ydiff a column vector and multiply through
-
-        gradient = gradient.reshape(self.w_.shape)
-        gradient[1:] += -abs(self.w_[1:]) * self.C
-
-        return gradient
-
-    def _l2_get_gradient(self,X,y):
-        ydiff = y-self.predict_proba(X,add_bias=False).ravel() # get y difference
-        gradient = np.mean(X * ydiff[:,np.newaxis], axis=0) # make ydiff a column vector and multiply through
-
-        gradient = gradient.reshape(self.w_.shape)
-        gradient[1:] += -2 * self.w_[1:] * self.C
-
-        return gradient
-
-        #sum of absolute values of the weights
-
-    def _both_get_gradient(self,X,y):
-        ydiff = y-self.predict_proba(X,add_bias=False).ravel() # get y difference
-        gradient = np.mean(X * ydiff[:,np.newaxis], axis=0) # make ydiff a column vector and multiply through
-
-        gradient = gradient.reshape(self.w_.shape)
-        gradient[1:] += ((-abs(self.w_[1:])) + (-2 * self.w_[1:])) * self.C
-
-        return gradient
-
-    def _get_original(self, X, y):
-        # programming \sum_i (yi-g(xi))xi
-        gradient = np.zeros(self.w_.shape) # set gradient to zero
-        for (xi,yi) in zip(X,y):
-            # the actual update inside of sum
-            gradi = (yi - self.predict_proba(xi,add_bias=False))*xi
-            # reshape to be column vector and add to gradient
-            gradient += gradi.reshape(self.w_.shape)
-
-        return gradient/float(len(y))
-
-    def _get_gradient(self,X,y, l_choice):
-        if l_choice == "o":
-            _get_original(self, X, y)
-        elif l_choice == "l1":
-            _l1_get_gradient(self, X, y)
-        elif l_choice == "l2":
-            _l2_get_gradient(self, X, y)
-        elif l_choice == "both":
-            _both_get_gradient(self, X, y)
 
     # public:
     def predict_proba(self,X,add_bias=True):
@@ -330,22 +255,57 @@ class VectorBinaryLogisticRegression(BinaryLogisticRegression):
         if self.optChoice == 'steepest':
             ydiff = y-self.predict_proba(X,add_bias=False).ravel() # get y difference
             gradient = np.mean(X * ydiff[:,np.newaxis], axis=0) # make ydiff a column vector and multiply through
-            return gradient.reshape(self.w_.shape)
-        if self.optChoice == 'stochastic':
+            gradient = gradient.reshape(self.w_.shape)
+
+
+            l_choice = self.reg_choice
+            if l_choice == "o":
+                gradient += gradient.reshape(self.w_.shape)
+            elif l_choice == "l1":
+                gradient[1:] += -abs(self.w_[1:]) * self.C
+            elif l_choice == "l2":
+                gradient[1:] += -2 * self.w_[1:] * self.C
+            elif l_choice == "both":
+                gradient[1:] += (-abs(self.w_[1:]) + (-2 * self.w_[1:])) * self.C
+
+            return gradient
+        elif self.optChoice == 'stochastic':
             # stochastic gradient calculation
             idx = int(np.random.rand()*len(y)) # grab random instance
             ydiff = y[idx]-self.predict_proba(X[idx],add_bias=False) # get y difference (now scalar)
             gradient = X[idx] * ydiff[:,np.newaxis] # make ydiff a column vector and multiply through
             gradient = gradient.reshape(self.w_.shape)
-            gradient[1:] += -2 * self.w_[1:] * self.C
+
+
+            l_choice = self.reg_choice
+            if l_choice == "o":
+                gradient += gradient.reshape(self.w_.shape)
+            elif l_choice == "l1":
+                gradient[1:] += -abs(self.w_[1:]) * self.C
+            elif l_choice == "l2":
+                gradient[1:] += -2 * self.w_[1:] * self.C
+            elif l_choice == "both":
+                gradient[1:] += (-abs(self.w_[1:]) + (-2 * self.w_[1:])) * self.C
+
+
             return gradient
-        if self.optChoice == 'newtonHessian':
+        elif self.optChoice == 'newtonHessian':
             g = self.predict_proba(X,add_bias=False).ravel() # get sigmoid value for all classes
             hessian = X.T @ np.diag(g*(1-g)) @ X - 2 * self.C # calculate the hessian
             ydiff = y-g # get y difference
             gradient = np.sum(X * ydiff[:,np.newaxis], axis=0) # make ydiff a column vector and multiply through
             gradient = gradient.reshape(self.w_.shape)
-            gradient[1:] += -2 * self.w_[1:] * self.C
+
+            l_choice = self.reg_choice
+            if l_choice == "o":
+                gradient += gradient.reshape(self.w_.shape)
+            elif l_choice == "l1":
+                gradient[1:] += -abs(self.w_[1:]) * self.C
+            elif l_choice == "l2":
+                gradient[1:] += -2 * self.w_[1:] * self.C
+            elif l_choice == "both":
+                gradient[1:] += (-abs(self.w_[1:]) + (-2 * self.w_[1:])) * self.C
+
             return pinv(hessian) @ gradient
 
 #Logistic Regression
@@ -373,7 +333,7 @@ class LogisticRegression:
         for i,yval in enumerate(self.unique_): # for each unique value
             y_binary = y==yval # create a binary problem
             # train the binary classifier for this class
-            blr = VectorBinaryLogisticRegression(self.eta,self.iters,self.C,self.optChoice, self.reg_choice,self.l_choice)
+            blr = VectorBinaryLogisticRegression(self.eta,self.iters,self.C,self.optChoice, self.reg_choice)
             blr.fit(X,y_binary)
             # add the trained classifier to the list
             self.classifiers_.append(blr)
@@ -391,98 +351,63 @@ class LogisticRegression:
     def predict(self,X):
         return np.argmax(self.predict_proba(X),axis=1) # take argmax along row
 
-#Test
-lr_steep0 = LogisticRegression(eta=0.1) # get object
-lr_steep1 = LogisticRegression(eta=0.1,reg_choice = "l1") # get object
-lr_steep2 = LogisticRegression(eta=0.1,reg_choice = "l2") # get object
-lr_steepb = LogisticRegression(eta=0.1,reg_choice = "both") # get object
-lr_shco0 = LogisticRegression(eta=0.1,iterations=1500,optChoice = 'stochastic')
-lr_shco1 = LogisticRegression(eta=0.1,iterations=1500,optChoice = 'stochastic',reg_choice = "l1")
-lr_shco2 = LogisticRegression(eta=0.1,iterations=1500,optChoice = 'stochastic',reg_choice = "l2")
-lr_shcob = LogisticRegression(eta=0.1,iterations=1500,optChoice = 'stochastic',reg_choice = "both")
-lr_nh0 = LogisticRegression(eta=0.1,iterations=1, optChoice = 'newtonHessian')
-lr_nh1 = LogisticRegression(eta=0.1,iterations=1, optChoice = 'newtonHessian',reg_choice = "l1")
-lr_nh2 = LogisticRegression(eta=0.1,iterations=1, optChoice = 'newtonHessian',reg_choice = "l2")
-lr_nhb = LogisticRegression(eta=0.1,iterations=1, optChoice = 'newtonHessian',reg_choice = "both")
-iter_num=0
-# the indices are the rows used for training and testing in each iteration
-for train_indices, test_indices in cv_object.split(X,y):
-    # I will create new variables here so that it is more obvious what
-    # the code is doing (you can compact this syntax and avoid duplicating memory,
-    # but it makes this code less readable)
-    X_train = X[train_indices]
-    y_train = y[train_indices]
+import numpy as np
+def getCArray(beginC, endC, stepSize):
+    cArr = []
+    for i in np.arange(beginC, endC, stepSize).tolist():
+        cArr.append(i)
+    return cArr
 
-    X_test = X[test_indices]
-    y_test = y[test_indices]
-
-    lr_steep0.fit(X_train,y_train)  # train object
-    y_hat = lr_steep0.predict(X_test) # get test set precitions
-    acc = mt.accuracy_score(y_test,y_hat)
-    print("====Steepest-Original====")
-    print("accuracy", acc )
-    lr_steep1.fit(X_train,y_train)  # train object
-    y_hat = lr_steep1.predict(X_test) # get test set precitions
-    acc = mt.accuracy_score(y_test,y_hat)
-    print("====Steepest-L1====")
-    print("accuracy", acc )
-    lr_steep2.fit(X_train,y_train)  # train object
-    y_hat = lr_steep2.predict(X_test) # get test set precitions
-    acc = mt.accuracy_score(y_test,y_hat)
-    print("====Steepest-2====")
-    print("accuracy", acc )
-    lr_steepb.fit(X_train,y_train)  # train object
-    y_hat = lr_steepb.predict(X_test) # get test set precitions
-    acc = mt.accuracy_score(y_test,y_hat)
-    print("====Steepest-Both====")
-    print("accuracy", acc )
-
-
-    lr_shco0.fit(X_train,y_train)  # train object
-    y_hat = lr_shco0.predict(X_test) # get test set precitions
-    acc = mt.accuracy_score(y_test,y_hat)
-    print("====Stochastic-O====")
-    print("accuracy", acc )
-    lr_shco1.fit(X_train,y_train)  # train object
-    y_hat = lr_shco1.predict(X_test) # get test set precitions
-    acc = mt.accuracy_score(y_test,y_hat)
-    print("====Stochastic-L1====")
-    print("accuracy", acc )
-    lr_shco2.fit(X_train,y_train)  # train object
-    y_hat = lr_shco2.predict(X_test) # get test set precitions
-    acc = mt.accuracy_score(y_test,y_hat)
-    print("====Stochastic-L2====")
-    print("accuracy", acc )
-    lr_shcob.fit(X_train,y_train)  # train object
-    y_hat = lr_shcob.predict(X_test) # get test set precitions
-    acc = mt.accuracy_score(y_test,y_hat)
-    print("====Stochastic-Both====")
-    print("accuracy", acc )
-
-
-    lr_nh0.fit(X_train,y_train)  # train object
-    y_hat = lr_nh0.predict(X_test) # get test set precitions
-    acc = mt.accuracy_score(y_test,y_hat)
-    print("====NewtonHessian-O====")
-    print("accuracy", acc )
-    lr_nh1.fit(X_train,y_train)  # train object
-    y_hat = lr_nh1.predict(X_test) # get test set precitions
-    acc = mt.accuracy_score(y_test,y_hat)
-    print("====NewtonHessian-L1====")
-    print("accuracy", acc )
-    lr_nh2.fit(X_train,y_train)  # train object
-    y_hat = lr_nh2.predict(X_test) # get test set precitions
-    acc = mt.accuracy_score(y_test,y_hat)
-    print("====NewtonHessian-L2====")
-    print("accuracy", acc )
-    lr_nhb.fit(X_train,y_train)  # train object
-    y_hat = lr_nhb.predict(X_test) # get test set precitions
-    acc = mt.accuracy_score(y_test,y_hat)
-    print("====NewtonHessian-both====")
-    print("accuracy", acc )
+def snoopReg(beginC, endC, stepSize, X_train, y_train,X_test,y_test, regression):
+    accuracyArr = []
+    for i in np.arange(beginC, endC, stepSize).tolist():
+        #Choose the optimization and the L term
+        if (regression == "lr_steep0"):
+            lr = LogisticRegression(eta=0.1, C = i)
+        elif (regression == "lr_steep1"):
+            lr = LogisticRegression(eta=0.1,C = i,reg_choice = "l1")
+        elif (regression == "lr_steep2"):
+            lr = LogisticRegression(eta=0.1, C = i, reg_choice = "l2")
+        elif (regression == "lr_steepb"):
+            lr = LogisticRegression(eta=0.1, C= i, reg_choice = "both")
+        elif (regression == "lr_scho0"):
+            lr = LogisticRegression(eta=0.1,iterations=1500,C = i, optChoice = 'stochastic')
+        elif (regression == "lr_scho1"):
+            lr = LogisticRegression(eta=0.1,iterations=1500, C = i, optChoice = 'stochastic',reg_choice = "l1")
+        elif (regression == "lr_scho2"):
+            lr = LogisticRegression(eta=0.1,iterations=1500, C = i, optChoice = 'stochastic',reg_choice = "l2")
+        elif (regression == "lr_schob"):
+            lr = LogisticRegression(eta=0.1,iterations=1500, C = i, optChoice = 'stochastic',reg_choice = "both")
+        elif (regression == "lr_nh0"):
+            lr = LogisticRegression(eta=0.1,iterations=1, C = i, optChoice = 'newtonHessian')
+        elif (regression == "lr_nh1"):
+            lr = LogisticRegression(eta=0.1,iterations=1, C = i, optChoice = 'newtonHessian',reg_choice = "l1")
+        elif (regression == "lr_nh2"):
+            lr = LogisticRegression(eta=0.1,iterations=1, C = i, optChoice = 'newtonHessian',reg_choice = "l2")
+        elif (regression == "lr_nhb"):
+            lr = LogisticRegression(eta=0.1,iterations=1, C = i, optChoice = 'newtonHessian',reg_choice = "both")
+        lr.fit(X_train,y_train)  # train object
+        y_hat = lr.predict(X_test) # get test set precitions
+        acc = mt.accuracy_score(y_test,y_hat)
+        accuracyArr.append(acc)
+    return accuracyArr
 
 
 
+
+
+regListName = ["Steepest-Orig :", "Steepest-1 :", "Steepest-2 :", "Steepest-B :", "Stochastic-Orig: ", "Stochastic-1: ", "Stochastic-2: ", "Stochastic-B: ", "NewtonHessian-Orig: ", "NewtonHessian-1: ", "NewtonHessian-2: ", "NewtonHessian-B: "]
+regList = ["lr_steep0", "lr_steep1", "lr_steep2", "lr_steepb", "lr_scho0", "lr_scho1", "lr_scho2", "lr_schob", "lr_nh0", "lr_nh1", "lr_nh2", "lr_nhb"]
+cList = [0.001,1,0.01]
+i = 0
+for r in regList:
+    regArr = snoopReg(beginC = cList[0], endC = cList[1], stepSize = cList[2], X_train = X_train, y_train = y_train, X_test = X_test,y_test = y_test, regression = r)
+    cArr = getCArray(beginC = cList[0], endC = cList[1], stepSize = cList[2])
+    print(regListName[i])
+    print("max accuracy: " , max(regArr))
+    c_value_index = regArr.index(max(regArr))
+    print("c value: ", cArr[c_value_index])
+    i+=1
 
 from sklearn.linear_model import LogisticRegression as SKLogisticRegression
 from sklearn.metrics import accuracy_score
