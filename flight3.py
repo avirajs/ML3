@@ -358,7 +358,7 @@ class LogisticRegression:
         for i,yval in enumerate(self.unique_): # for each unique value
             y_binary = y==yval # create a binary problem
             # train the binary classifier for this class
-            blr = VectorBinaryLogisticRegression(self.eta,self.iters,self.C,self.optChoice, self.reg_choice,self.l_choice)
+            blr = VectorBinaryLogisticRegression(self.eta,self.iters,self.C,self.optChoice, self.reg_choice)
             blr.fit(X,y_binary)
             # add the trained classifier to the list
             self.classifiers_.append(blr)
@@ -375,6 +375,7 @@ class LogisticRegression:
 
     def predict(self,X):
         return np.argmax(self.predict_proba(X),axis=1) # take argmax along row
+
 
 #Test
 lr_steep0 = LogisticRegression(eta=0.1) # get object
