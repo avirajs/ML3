@@ -280,22 +280,57 @@ class VectorBinaryLogisticRegression(BinaryLogisticRegression):
         if self.optChoice == 'steepest':
             ydiff = y-self.predict_proba(X,add_bias=False).ravel() # get y difference
             gradient = np.mean(X * ydiff[:,np.newaxis], axis=0) # make ydiff a column vector and multiply through
-            return gradient.reshape(self.w_.shape)
-        if self.optChoice == 'stochastic':
+            gradient = gradient.reshape(self.w_.shape)
+
+
+            l_choice = self.reg_choice
+            if l_choice == "o":
+                gradient += gradient.reshape(self.w_.shape)
+            elif l_choice == "l1":
+                gradient[1:] += -abs(self.w_[1:]) * self.C
+            elif l_choice == "l2":
+                gradient[1:] += -2 * self.w_[1:] * self.C
+            elif l_choice == "both":
+                gradient[1:] += (-abs(self.w_[1:]) + (-2 * self.w_[1:])) * self.C
+
+            return gradient
+        elif self.optChoice == 'stochastic':
             # stochastic gradient calculation
             idx = int(np.random.rand()*len(y)) # grab random instance
             ydiff = y[idx]-self.predict_proba(X[idx],add_bias=False) # get y difference (now scalar)
             gradient = X[idx] * ydiff[:,np.newaxis] # make ydiff a column vector and multiply through
             gradient = gradient.reshape(self.w_.shape)
-            gradient[1:] += -2 * self.w_[1:] * self.C
+
+
+            l_choice = self.reg_choice
+            if l_choice == "o":
+                gradient += gradient.reshape(self.w_.shape)
+            elif l_choice == "l1":
+                gradient[1:] += -abs(self.w_[1:]) * self.C
+            elif l_choice == "l2":
+                gradient[1:] += -2 * self.w_[1:] * self.C
+            elif l_choice == "both":
+                gradient[1:] += (-abs(self.w_[1:]) + (-2 * self.w_[1:])) * self.C
+
+
             return gradient
-        if self.optChoice == 'newtonHessian':
+        elif self.optChoice == 'newtonHessian':
             g = self.predict_proba(X,add_bias=False).ravel() # get sigmoid value for all classes
             hessian = X.T @ np.diag(g*(1-g)) @ X - 2 * self.C # calculate the hessian
             ydiff = y-g # get y difference
             gradient = np.sum(X * ydiff[:,np.newaxis], axis=0) # make ydiff a column vector and multiply through
             gradient = gradient.reshape(self.w_.shape)
-            gradient[1:] += -2 * self.w_[1:] * self.C
+
+            l_choice = self.reg_choice
+            if l_choice == "o":
+                gradient += gradient.reshape(self.w_.shape)
+            elif l_choice == "l1":
+                gradient[1:] += -abs(self.w_[1:]) * self.C
+            elif l_choice == "l2":
+                gradient[1:] += -2 * self.w_[1:] * self.C
+            elif l_choice == "both":
+                gradient[1:] += (-abs(self.w_[1:]) + (-2 * self.w_[1:])) * self.C
+
             return pinv(hessian) @ gradient
 
 #Logistic Regression
