@@ -17,7 +17,7 @@ for col in ['TailNum','FlightNum','OriginAirportID',
            'DepDelayMinutes','TaxiIn','TaxiOut','CRSArrTime','ArrTime','ArrDelay','ArrDelayMinutes','ArrDelayGroup','ATimeBlk','CancellationReason',
             'Diverted', 'AirTime','CarrierDelay','WeatherDelay','NASDelay','SecurityDelay','LateAircraftDelay','FirstDepTime1','FirstDepTime2',
             'FirstDepTime','TotalAddGTime','LongestAddGTime','DivAirportLandings','DivReachedDest','DivActualElapsedTime','DivArrDelay','DivDistance',
-           'CRSElapsedTime','Flights','Cancelled','Unnamed: 0', 'Distance', 'DistGroup']:
+           'CRSElapsedTime','Flights','Cancelled','Unnamed: 0', 'Distance', 'DistGroup', 'ActualElapsedTime']:
     if col in df:
         del df[col]
 
@@ -62,7 +62,7 @@ def plot_explained_variance(pca):
         "layout": Layout(xaxis=XAxis(title='Principal components'), yaxis=YAxis(title='Explained variance ratio'))
     })
 
-features = ['Year','Quarter','Month' ,'DayofMonth','DayOfWeek','DepDelay','ActualElapsedTime']
+features = ['Year','Quarter','Month' ,'DayofMonth','DayOfWeek','DepDelay']
 
 
 from sklearn.preprocessing import StandardScaler
@@ -92,7 +92,7 @@ def time_converter(t):
 df["RealDepTime"] = df.apply( lambda row: time_converter(row.DepTime), axis=1)
 
 
-cleaned_df = df[['Month' ,'airline','DayofMonth','DayOfWeek', 'ActualElapsedTime', 'DepDelayGroup','RealDepTime']]
+cleaned_df = df[['Month' ,'airline','DayofMonth','DayOfWeek', 'DepDelayGroup','RealDepTime']]
 columns = cleaned_df # Declare the columns names
 y = columns
 
@@ -132,7 +132,7 @@ from sklearn.model_selection import ShuffleSplit
 if 'DepDelayGroupA' in cleaned_df:
     y = cleaned_df['DepDelayGroupA'].values # get the labels we want
     del cleaned_df['DepDelayGroupA'] # get rid of the class label
-    norm_features = ['Month','DayofMonth','DayOfWeek','ActualElapsedTime','RealDepTime' ]
+    norm_features = ['Month','DayofMonth','DayOfWeek','RealDepTime' ]
     cleaned_df[norm_features] = (cleaned_df[norm_features]-cleaned_df[norm_features].mean()) / cleaned_df[norm_features].std()
     X = cleaned_df.values # use everything else to predict!
 
