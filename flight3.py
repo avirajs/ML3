@@ -394,25 +394,128 @@ def snoopReg(beginC, endC, stepSize, X_train, y_train,X_test,y_test, regression)
 
 
 
-
-
-regListName = ["Steepest-Orig :", "Steepest-1 :", "Steepest-2 :", "Steepest-B :", "Stochastic-Orig: ", "Stochastic-1: ", "Stochastic-2: ", "Stochastic-B: ", "NewtonHessian-Orig: ", "NewtonHessian-1: ", "NewtonHessian-2: ", "NewtonHessian-B: "]
-regList = ["lr_steep0", "lr_steep1", "lr_steep2", "lr_steepb", "lr_scho0", "lr_scho1", "lr_scho2", "lr_schob", "lr_nh0", "lr_nh1", "lr_nh2", "lr_nhb"]
-cList = [0.001,1,0.01]
-i = 0
-for r in regList:
-    regArr = snoopReg(beginC = cList[0], endC = cList[1], stepSize = cList[2], X_train = X_train, y_train = y_train, X_test = X_test,y_test = y_test, regression = r)
-    cArr = getCArray(beginC = cList[0], endC = cList[1], stepSize = cList[2])
-    print(regListName[i])
-    print("max accuracy: " , max(regArr))
-    c_value_index = regArr.index(max(regArr))
-    print("c value: ", cArr[c_value_index])
-    i+=1
-
 from sklearn.linear_model import LogisticRegression as SKLogisticRegression
 from sklearn.metrics import accuracy_score
 lr_sk = SKLogisticRegression() # all params default
 
-lr_sk.fit(X,y)
-yhat = lr_sk.predict(X)
-print('Accuracy of: ',accuracy_score(y,yhat))
+
+num_cv_iterations = 50
+num_instances = len(y)
+cv_object = ShuffleSplit( n_splits=num_cv_iterations, test_size  = 0.2)
+
+print(cv_object)
+
+# run logistic regression and vary some parameters
+from sklearn import metrics as mt
+
+# first we create a reusable logisitic regression object
+#   here we can setup the object with different learning parameters and constants
+lr_clf = LogisticRegression(eta=0.1,iterations=1500,C = 0.109, optChoice = 'stochastic', reg_choice = "both") # get object
+
+# now we can use the cv_object that we setup before to iterate through the
+#    different training and testing sets. Each time we will reuse the logisitic regression
+#    object, but it gets trained on different data each time we use it.
+
+import time
+
+
+
+iter_num=0
+# the indices are the rows used for training and testing in each iteration
+stoch_time, scikit_time, stoch_acc, scikit_acc = [], [], [], []
+for train_indices, test_indices in cv_object.split(X,y):
+    # I will create new variables here so that it is more obvious what
+    # the code is doing (you can compact this syntax and avoid duplicating memory,
+    # but it makes this code less readable)
+    X_train = X[train_indices]
+    y_train = y[train_indices]
+
+    X_test = X[test_indices]
+    y_test = y[test_indices]
+    # train the reusable logisitc regression model on the training data
+    t0 = time.time()
+    lr_sk.fit(X_train,y_train)  # train object
+    y_hat = lr_sk.predict(X_test) # get test set precitions
+    t1 = time.time()
+
+    total_scikit = t1-t0
+    scikit_time.append(total_scikit)
+
+
+    # now let's get the accuracy and confusion matrix for this iterations of training/testing
+    acc = mt.accuracy_score(y_test,y_hat)
+    conf = mt.confusion_matrix(y_test,y_hat)
+    print("====Iteration",iter_num," ====")
+    print(f"Scikit accuracy {acc};  time: {total_scikit}" )
+    # print("confusion matrix\n",conf)
+    scikit_acc.append(acc)
+
+
+    t0 = time.time()
+    lr_clf.fit(X_train,y_train)  # train object
+    y_hat = lr_clf.predict(X_test) # get test set precitions
+    t1 = time.time()
+    total_clf = t1-t0
+    stoch_time.append(total_clf)
+
+    # now let's get the accuracy and confusion matrix for this iterations of training/testing
+    acc = mt.accuracy_score(y_test,y_hat)
+    conf = mt.confusion_matrix(y_test,y_hat)
+    print(f"Stochasitic Org accuracy {acc}; time: {total_clf}" )
+    # print("confusion matrix\n",conf)
+    stoch_acc.append(acc)
+
+
+    iter_num+=1
+
+print(f"Stochasitic Org accuracy {np.average(stoch_acc)}; time: {np.average(stoch_time)}" )
+print(f"Scikit Org accuracy {np.average(scikit_acc)}; time: {np.average(scikit_time)}" )
+
+objects = ('Stoch Accuracy', 'Scikit Accuracy')
+y_pos = np.arange(len(objects))
+performance = [np.average(stoch_acc),np.average(scikit_acc)]
+
+plt.bar(y_pos, performance, align='center', alpha=0.5)
+plt.xticks(y_pos, objects)
+plt.ylabel('Accuract Percentage')
+plt.title('Classification Accuracy')
+
+plt.show()
+
+
+objects = ('Stoch ', 'Scikit ')
+y_pos = np.arange(len(objects))
+performance = [np.average(stoch_time),np.average(scikit_time)]
+
+plt.bar(y_pos, performance, align='center', alpha=0.5)
+plt.xticks(y_pos, objects)
+plt.ylabel('Time')
+plt.title('Time to Train Comparison')
+
+plt.show()
+# Also note that every time you run the above code
+#   it randomly creates a new training and testing set,
+#   so accuracy will be different each time
+
+
+# regListName = ["Steepest-Orig :", "Steepest-1 :", "Steepest-2 :", "Steepest-B :", "Stochastic-Orig: ", "Stochastic-1: ", "Stochastic-2: ", "Stochastic-B: ", "NewtonHessian-Orig: ", "NewtonHessian-1: ", "NewtonHessian-2: ", "NewtonHessian-B: "]
+# regList = ["lr_steep0", "lr_steep1", "lr_steep2", "lr_steepb", "lr_scho0", "lr_scho1", "lr_scho2", "lr_schob", "lr_nh0", "lr_nh1", "lr_nh2", "lr_nhb"]
+# cList = [0.001,1,0.01]
+# i = 0
+# for r in regList:
+#     regArr = snoopReg(beginC = cList[0], endC = cList[1], stepSize = cList[2], X_train = X_train, y_train = y_train, X_test = X_test,y_test = y_test, regression = r)
+#     cArr = getCArray(beginC = cList[0], endC = cList[1], stepSize = cList[2])
+#     print(regListName[i])
+#     print("max accuracy: " , max(regArr))
+#     c_value_index = regArr.index(max(regArr))
+#     print("c value: ", cArr[c_value_index])
+#     i+=1
+#
+
+# from sklearn.linear_model import LogisticRegression as SKLogisticRegression
+# from sklearn.metrics import accuracy_score
+# lr_sk = SKLogisticRegression() # all params default
+#
+# lr_sk.fit(X,y)
+# yhat = lr_sk.predict(X)
+# print('Accuracy of: ',accuracy_score(y,yhat))
