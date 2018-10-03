@@ -74,7 +74,7 @@ x = StandardScaler().fit_transform(x)
 
 from sklearn.decomposition import PCA
 
-pca = PCA(n_components=7)
+pca = PCA(n_components=6)
 X_pca = pca.fit(x)
 plot_explained_variance(pca)
 
@@ -150,6 +150,9 @@ cv_object = ShuffleSplit(
                          test_size  = 0.2)
 print( cv_object.split(X,y))
 # the indices are the rows used for training and testing in each iteration
+
+X_train, y_train, X_test, y_test = ([] for i in range(4))
+
 for train_indices, test_indices in cv_object.split(X,y):
     # I will create new variables here so that it is more obvious what
     # the code is doing (you can compact this syntax and avoid duplicating memory,
@@ -262,11 +265,11 @@ class VectorBinaryLogisticRegression(BinaryLogisticRegression):
             if l_choice == "o":
                 gradient += gradient.reshape(self.w_.shape)
             elif l_choice == "l1":
-                gradient[1:] += -abs(self.w_[1:]) * self.C
+                gradient[1:] += -np.sin(self.w_[1:]) * self.C
             elif l_choice == "l2":
                 gradient[1:] += -2 * self.w_[1:] * self.C
             elif l_choice == "both":
-                gradient[1:] += (-abs(self.w_[1:]) + (-2 * self.w_[1:])) * self.C
+                gradient[1:] += (-np.sin(self.w_[1:]) + (-2 * self.w_[1:])) * self.C
 
             return gradient
         elif self.optChoice == 'stochastic':
@@ -281,11 +284,11 @@ class VectorBinaryLogisticRegression(BinaryLogisticRegression):
             if l_choice == "o":
                 gradient += gradient.reshape(self.w_.shape)
             elif l_choice == "l1":
-                gradient[1:] += -abs(self.w_[1:]) * self.C
+                gradient[1:] += -np.sin(self.w_[1:]) * self.C
             elif l_choice == "l2":
                 gradient[1:] += -2 * self.w_[1:] * self.C
             elif l_choice == "both":
-                gradient[1:] += (-abs(self.w_[1:]) + (-2 * self.w_[1:])) * self.C
+                gradient[1:] += (-np.sin(self.w_[1:]) + (-2 * self.w_[1:])) * self.C
 
 
             return gradient
@@ -300,11 +303,11 @@ class VectorBinaryLogisticRegression(BinaryLogisticRegression):
             if l_choice == "o":
                 gradient += gradient.reshape(self.w_.shape)
             elif l_choice == "l1":
-                gradient[1:] += -abs(self.w_[1:]) * self.C
+                gradient[1:] += -np.sin(self.w_[1:]) * self.C
             elif l_choice == "l2":
                 gradient[1:] += -2 * self.w_[1:] * self.C
             elif l_choice == "both":
-                gradient[1:] += (-abs(self.w_[1:]) + (-2 * self.w_[1:])) * self.C
+                gradient[1:] += (-np.sin(self.w_[1:]) + (-2 * self.w_[1:])) * self.C
 
             return pinv(hessian) @ gradient
 
@@ -392,6 +395,39 @@ def snoopReg(beginC, endC, stepSize, X_train, y_train,X_test,y_test, regression)
         accuracyArr.append(acc)
     return accuracyArr
 
+def best_c_confusion( X_train, y_train,X_test,y_test, regression, Cvalue):
+    #Choose the optimization and the L term
+    if (regression == "lr_steep0"):
+            lr = LogisticRegression(eta=0.1, C = Cvalue )
+    elif (regression == "lr_steep1"):
+        lr = LogisticRegression(eta=0.1,C = Cvalue,reg_choice = "l1")
+    elif (regression == "lr_steep2"):
+        lr = LogisticRegression(eta=0.1, C = Cvalue, reg_choice = "l2")
+    elif (regression == "lr_steepb"):
+        lr = LogisticRegression(eta=0.1, C= Cvalue, reg_choice = "both")
+    elif (regression == "lr_scho0"):
+        lr = LogisticRegression(eta=0.1,iterations=1500,C = Cvalue, optChoice = 'stochastic')
+    elif (regression == "lr_scho1"):
+        lr = LogisticRegression(eta=0.1,iterations=1500, C = Cvalue, optChoice = 'stochastic',reg_choice = "l1")
+    elif (regression == "lr_scho2"):
+        lr = LogisticRegression(eta=0.1,iterations=1500, C = Cvalue, optChoice = 'stochastic',reg_choice = "l2")
+    elif (regression == "lr_schob"):
+        lr = LogisticRegression(eta=0.1,iterations=1500, C = Cvalue, optChoice = 'stochastic',reg_choice = "both")
+    elif (regression == "lr_nh0"):
+        lr = LogisticRegression(eta=0.1,iterations=1, C = Cvalue, optChoice = 'newtonHessian')
+    elif (regression == "lr_nh1"):
+        lr = LogisticRegression(eta=0.1,iterations=1, C = Cvalue, optChoice = 'newtonHessian',reg_choice = "l1")
+    elif (regression == "lr_nh2"):
+        lr = LogisticRegression(eta=0.1,iterations=1, C = Cvalue, optChoice = 'newtonHessian',reg_choice = "l2")
+    elif (regression == "lr_nhb"):
+        lr = LogisticRegression(eta=0.1,iterations=1, C = Cvalue, optChoice = 'newtonHessian',reg_choice = "both")
+    lr.fit(X_train,y_train)  # train object
+    y_hat = lr.predict(X_test) # get test set precitions
+    con = mt.confusion_matrix(y_test,y_hat)
+    cm = con.astype('float') / con.sum(axis=1)[:, np.newaxis]
+    print(regression)
+    print(cm)
+
 
 
 
@@ -400,14 +436,21 @@ regListName = ["Steepest-Orig :", "Steepest-1 :", "Steepest-2 :", "Steepest-B :"
 regList = ["lr_steep0", "lr_steep1", "lr_steep2", "lr_steepb", "lr_scho0", "lr_scho1", "lr_scho2", "lr_schob", "lr_nh0", "lr_nh1", "lr_nh2", "lr_nhb"]
 cList = [0.001,1,0.01]
 i = 0
+bestC = []
 for r in regList:
     regArr = snoopReg(beginC = cList[0], endC = cList[1], stepSize = cList[2], X_train = X_train, y_train = y_train, X_test = X_test,y_test = y_test, regression = r)
     cArr = getCArray(beginC = cList[0], endC = cList[1], stepSize = cList[2])
     print(regListName[i])
     print("max accuracy: " , max(regArr))
     c_value_index = regArr.index(max(regArr))
+    bestC.append(cArr[c_value_index])
     print("c value: ", cArr[c_value_index])
     i+=1
+i = 0
+for r in regList:
+    best_c_confusion(X_train = X_train, y_train = y_train, X_test = X_test,y_test = y_test, regression = r, Cvalue = bestC[i])
+    i+=1
+
 
 from sklearn.linear_model import LogisticRegression as SKLogisticRegression
 from sklearn.metrics import accuracy_score
