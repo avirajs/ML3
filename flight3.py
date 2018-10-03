@@ -363,7 +363,7 @@ def getCArray(beginC, endC, stepSize):
         cArr.append(i)
     return cArr
 
-def snoopReg(beginC, endC, stepSize, X_train, y_train,X_test,y_test, regression):
+def find_best_C(beginC, endC, stepSize, X_train, y_train,X_test,y_test, regression):
     accuracyArr = []
     for i in np.arange(beginC, endC, stepSize).tolist():
         #Choose the optimization and the L term
@@ -405,7 +405,7 @@ i = 0
 bestC = []
 bestAccuracyScore = []
 for r in regList:
-    regArr = snoopReg(beginC = cList[0], endC = cList[1], stepSize = cList[2], X_train = X_train, y_train = y_train, X_test = X_test,y_test = y_test, regression = r)
+    regArr = find_best_C(beginC = cList[0], endC = cList[1], stepSize = cList[2], X_train = X_train, y_train = y_train, X_test = X_test,y_test = y_test, regression = r)
     cArr = getCArray(beginC = cList[0], endC = cList[1], stepSize = cList[2])
     print(regListName[i])
     plt.scatter(cArr, regArr)
