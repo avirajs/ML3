@@ -1,0 +1,37 @@
+Model Performance of Business Section (Append this to it):
+-----------------------------------------------
+Another consideration is that accuracy may not be the best evaluation metric to use. Since we are grouping into 15 different delay groups a lower accuracy would still be fine as long as the delay groups classifcations are close to one another. Thus, even a 50% accurate for 15 groups would 7.5 times better than a 50% for a binary classification grouping, since it is more specific beyond just a delay/no delay.
+
+
+
+
+
+
+Explanation of training split
+--------------------------------
+dividing into testing and training a ratio of 80:20 would be great for our dataset because it is neither too small nor too bigs. An average dataset size dataset like this one would not need more than 20% of data as testing because 362 is already enough to capture most of the variation. But also since our data is not computationally expensive the test data does not need to be less than 20% either.
+
+
+
+
+
+Is your method of selecting parameters justified? That is, do you think there is any "data snooping" involved with this method of selecting parameters?
+-------------------------------------------
+No, our method of selecting parameters may not be justified. Our technique of selecting every permutation of parameters to choose to the best one may be biased because they are overfitted only for our dataset. The parameters selected that were optimal for this dataset of flights may not be optimal for another.
+
+
+
+
+
+Visualize the performance differences in terms of training time and classification performance. Discuss the results. 
+----------------------------------------------
+Our training time for our best classification is much worse but our accuracy significantly better.
+
+
+
+
+
+
+Which implementation of logistic regression would you advise be used in a deployed machine learning model, your implementation or scikit-learn (or other third party)? Why?
+----------------------------------------------------
+Since our classifcation performance was 8% more but took more time, ours would be a better option when time is available. And in fact time will be available, flights can be scheduled by the airline up to 150 days in advance; this would give the features needed then to run the regression on all flights ahead of time. The accuracy obtained would be worth cost of computational power and time since the benefits described in the business case would be captured.
