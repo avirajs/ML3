@@ -113,6 +113,8 @@ print(cleaned_df['DepDelayGroupA'].nunique())
 print(df['DepDelayGroup'].nunique())
 
 #show the value that coorsponds to original groups
+
+
 comp_df = cleaned_df[['DepDelayGroup' ,'DepDelayGroupA']]
 print(comp_df.drop_duplicates())
 
@@ -263,7 +265,7 @@ class VectorBinaryLogisticRegression(BinaryLogisticRegression):
 
             l_choice = self.reg_choice
             if l_choice == "o":
-                gradient += gradient.reshape(self.w_.shape)
+                p = 0
             elif l_choice == "l1":
                 gradient[1:] += -np.sin(self.w_[1:]) * self.C
             elif l_choice == "l2":
@@ -282,7 +284,7 @@ class VectorBinaryLogisticRegression(BinaryLogisticRegression):
 
             l_choice = self.reg_choice
             if l_choice == "o":
-                gradient += gradient.reshape(self.w_.shape)
+                p = 0
             elif l_choice == "l1":
                 gradient[1:] += -np.sin(self.w_[1:]) * self.C
             elif l_choice == "l2":
@@ -301,7 +303,7 @@ class VectorBinaryLogisticRegression(BinaryLogisticRegression):
 
             l_choice = self.reg_choice
             if l_choice == "o":
-                gradient += gradient.reshape(self.w_.shape)
+                p = 0
             elif l_choice == "l1":
                 gradient[1:] += -np.sin(self.w_[1:]) * self.C
             elif l_choice == "l2":
@@ -441,6 +443,11 @@ for r in regList:
     regArr = snoopReg(beginC = cList[0], endC = cList[1], stepSize = cList[2], X_train = X_train, y_train = y_train, X_test = X_test,y_test = y_test, regression = r)
     cArr = getCArray(beginC = cList[0], endC = cList[1], stepSize = cList[2])
     print(regListName[i])
+    plt.scatter(cArr, regArr)
+    plt.xlabel("C Value")
+    plt.ylabel("Accuracy Value")
+    plt.title("C Value v Accuracy")
+    plt.show()
     print("max accuracy: " , max(regArr))
     c_value_index = regArr.index(max(regArr))
     bestC.append(cArr[c_value_index])
@@ -450,8 +457,6 @@ i = 0
 for r in regList:
     best_c_confusion(X_train = X_train, y_train = y_train, X_test = X_test,y_test = y_test, regression = r, Cvalue = bestC[i])
     i+=1
-
-
 from sklearn.linear_model import LogisticRegression as SKLogisticRegression
 from sklearn.metrics import accuracy_score
 lr_sk = SKLogisticRegression() # all params default
