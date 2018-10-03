@@ -74,7 +74,7 @@ x = StandardScaler().fit_transform(x)
 
 from sklearn.decomposition import PCA
 
-pca = PCA(n_components=7)
+pca = PCA(n_components=6)
 X_pca = pca.fit(x)
 plot_explained_variance(pca)
 
