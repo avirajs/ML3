@@ -397,7 +397,33 @@ def snoopReg(beginC, endC, stepSize, X_train, y_train,X_test,y_test, regression)
         accuracyArr.append(acc)
     return accuracyArr
 
-def best_c_confusion( X_train, y_train,X_test,y_test, regression, Cvalue):
+
+regListName = ["Steepest-Orig :", "Steepest-1 :", "Steepest-2 :", "Steepest-B :", "Stochastic-Orig: ", "Stochastic-1: ", "Stochastic-2: ", "Stochastic-B: ", "NewtonHessian-Orig: ", "NewtonHessian-1: ", "NewtonHessian-2: ", "NewtonHessian-B: "]
+regList = ["lr_steep0", "lr_steep1", "lr_steep2", "lr_steepb", "lr_scho0", "lr_scho1", "lr_scho2", "lr_schob", "lr_nh0", "lr_nh1", "lr_nh2", "lr_nhb"]
+cList = [0.001,1,0.01]
+i = 0
+bestC = []
+bestAccuracyScore = []
+for r in regList:
+    regArr = snoopReg(beginC = cList[0], endC = cList[1], stepSize = cList[2], X_train = X_train, y_train = y_train, X_test = X_test,y_test = y_test, regression = r)
+    cArr = getCArray(beginC = cList[0], endC = cList[1], stepSize = cList[2])
+    print(regListName[i])
+    plt.scatter(cArr, regArr)
+    plt.xlabel("C Value")
+    plt.ylabel("Accuracy Value")
+    plt.title("C Value v Accuracy")
+    plt.show()
+    print("max accuracy: " , max(regArr))
+    bestAccuracyScore.append(max(regArr))
+    c_value_index = regArr.index(max(regArr))
+    bestC.append(cArr[c_value_index])
+    print("c value: ", cArr[c_value_index])
+    i+=1
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn import metrics
+def best_c_confusion( X_train, y_train,X_test,y_test, regression, Cvalue, i):
     #Choose the optimization and the L term
     if (regression == "lr_steep0"):
             lr = LogisticRegression(eta=0.1, C = Cvalue )
@@ -425,42 +451,41 @@ def best_c_confusion( X_train, y_train,X_test,y_test, regression, Cvalue):
         lr = LogisticRegression(eta=0.1,iterations=1, C = Cvalue, optChoice = 'newtonHessian',reg_choice = "both")
     lr.fit(X_train,y_train)  # train object
     y_hat = lr.predict(X_test) # get test set precitions
-    con = mt.confusion_matrix(y_test,y_hat)
-    cm = con.astype('float') / con.sum(axis=1)[:, np.newaxis]
-    print(regression)
-    print(cm)
+    cm = metrics.confusion_matrix(y_test, y_hat)
+    acc = mt.accuracy_score(y_test,y_hat)
+    plt.figure(figsize=(15,15))
+    sns.heatmap(cm, annot=True, fmt=".3f", linewidths=.5, square = True, cmap = 'Blues_r');
+    plt.ylabel('Actual label');
+    plt.xlabel('Predicted label');
+    all_sample_title = regListName[i] + 'Accuracy Score: {0}'.format(acc)
+    plt.title(all_sample_title, size = 15);
 
-
-
-
-
-regListName = ["Steepest-Orig :", "Steepest-1 :", "Steepest-2 :", "Steepest-B :", "Stochastic-Orig: ", "Stochastic-1: ", "Stochastic-2: ", "Stochastic-B: ", "NewtonHessian-Orig: ", "NewtonHessian-1: ", "NewtonHessian-2: ", "NewtonHessian-B: "]
-regList = ["lr_steep0", "lr_steep1", "lr_steep2", "lr_steepb", "lr_scho0", "lr_scho1", "lr_scho2", "lr_schob", "lr_nh0", "lr_nh1", "lr_nh2", "lr_nhb"]
-cList = [0.001,1,0.01]
+#show confusion matrix for each method
 i = 0
-bestC = []
 for r in regList:
-    regArr = snoopReg(beginC = cList[0], endC = cList[1], stepSize = cList[2], X_train = X_train, y_train = y_train, X_test = X_test,y_test = y_test, regression = r)
-    cArr = getCArray(beginC = cList[0], endC = cList[1], stepSize = cList[2])
-    print(regListName[i])
-    plt.scatter(cArr, regArr)
-    plt.xlabel("C Value")
-    plt.ylabel("Accuracy Value")
-    plt.title("C Value v Accuracy")
+    best_c_confusion(X_train = X_train, y_train = y_train, X_test = X_test,y_test = y_test, regression = r, Cvalue = bestC[i], i = i)
+    i+=1
+
+
+def plot_confusion_scikit(y,yhat):
+    cm = metrics.confusion_matrix(y, yhat)
+    plt.figure(figsize=(15,15))
+    sns.heatmap(cm, annot=True, fmt=".3f", linewidths=.5, square = True, cmap = 'Blues_r')
+    plt.ylabel('Actual label')
+    plt.xlabel('Predicted label')
+    all_sample_title = 'Accuracy Score: {0}'.format(accuracy_score(y,yhat))
+    plt.title(all_sample_title, size = 15)
     plt.show()
-    print("max accuracy: " , max(regArr))
-    c_value_index = regArr.index(max(regArr))
-    bestC.append(cArr[c_value_index])
-    print("c value: ", cArr[c_value_index])
-    i+=1
-i = 0
-for r in regList:
-    best_c_confusion(X_train = X_train, y_train = y_train, X_test = X_test,y_test = y_test, regression = r, Cvalue = bestC[i])
-    i+=1
+
 from sklearn.linear_model import LogisticRegression as SKLogisticRegression
 from sklearn.metrics import accuracy_score
 lr_sk = SKLogisticRegression() # all params default
-
 lr_sk.fit(X,y)
 yhat = lr_sk.predict(X)
 print('Accuracy of: ',accuracy_score(y,yhat))
+
+#show confusion matrix for scikit learn
+plot_confusion_scikit(y,yhat)
+#show confusion matrix for best method Stoc both
+i = bestAccuracyScore.index(max(bestAccuracyScore))
+best_c_confusion(X_train = X_train, y_train = y_train, X_test = X ,y_test = y, regression = regList[i], Cvalue = bestC[i], i = 7)
