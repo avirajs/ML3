@@ -483,9 +483,8 @@ lr_sk = SKLogisticRegression() # all params default
 lr_sk.fit(X,y)
 yhat = lr_sk.predict(X)
 print('Accuracy of: ',accuracy_score(y,yhat))
-
 #show confusion matrix for scikit learn
 plot_confusion_scikit(y,yhat)
-#show confusion matrix for best method Stoc both
+#show confusion matrix and accuracy score for best regression 
 i = bestAccuracyScore.index(max(bestAccuracyScore))
 best_c_confusion(X_train = X_train, y_train = y_train, X_test = X ,y_test = y, regression = regList[i], Cvalue = bestC[i], i = 7)
