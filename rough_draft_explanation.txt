@@ -25,7 +25,10 @@ No, our method of selecting parameters may not be justified. Our technique of se
 
 Visualize the performance differences in terms of training time and classification performance. Discuss the results. 
 ----------------------------------------------
-Our training time for our best classification is much worse but our accuracy significantly better.
+The for the most part as the classification performance increased as the time trained, however there were zig zigs due to random speedups and slowdowns of the computer processor. We ran the the regression on increasing the data size by adding 2% of the randomly selected data each time and running this 10 times to get an average. This eliminates any possible impact of data snooping.
+
+Scikit is faster and its accuracy is higher but this conclusion was originally hidden due to our incessant data snooping. We chose C values that would help our regression do better on all our tests. Only after random sampling multiple times with different amounts of data can we see that Scikit time has better results on average.
+
 
 
 
@@ -35,3 +38,7 @@ Our training time for our best classification is much worse but our accuracy sig
 Which implementation of logistic regression would you advise be used in a deployed machine learning model, your implementation or scikit-learn (or other third party)? Why?
 ----------------------------------------------------
 Since our classifcation performance was 8% more but took more time, ours would be a better option when time is available. And in fact time will be available, flights can be scheduled by the airline up to 150 days in advance; this would give the features needed then to run the regression on all flights ahead of time. The accuracy obtained would be worth cost of computational power and time since the benefits described in the business case would be captured.
+
+
+
+
