@@ -40,5 +40,7 @@ Which implementation of logistic regression would you advise be used in a deploy
 Since our classifcation performance was 8% more but took more time, ours would be a better option when time is available. And in fact time will be available, flights can be scheduled by the airline up to 150 days in advance; this would give the features needed then to run the regression on all flights ahead of time. The accuracy obtained would be worth cost of computational power and time since the benefits described in the business case would be captured.
 
 
-
+C value charts
+-------------------------
+For steepest descent C value was following a positive trend with accuracy, whereas for stochastic it was very random, on the other hand for Hessian. We used a searching method to iterate and find our best C. Because we were choosing for the best accuracy we found a very specific instance of stochastic as our best. In reality, out of our regression versions NewtonHessian should be our best.
 
