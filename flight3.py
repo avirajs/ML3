@@ -418,58 +418,89 @@ lr_clf = LogisticRegression(eta=0.1,iterations=1500,C = 0.109, optChoice = 'stoc
 
 import time
 
-
-
-iter_num=0
+iter_num=1
 # the indices are the rows used for training and testing in each iteration
 stoch_time, scikit_time, stoch_acc, scikit_acc = [], [], [], []
-for train_indices, test_indices in cv_object.split(X,y):
-    # I will create new variables here so that it is more obvious what
-    # the code is doing (you can compact this syntax and avoid duplicating memory,
-    # but it makes this code less readable)
-    X_train = X[train_indices]
-    y_train = y[train_indices]
+for i in range(10):
+    for train_indices, test_indices in cv_object.split(X,y):
+        # I will create new variables here so that it is more obvious what
+        # the code is doing (you can compact this syntax and avoid duplicating memory,
+        # but it makes this code less readable)
+        X_train = X[train_indices][:int(len(X) * (iter_num/50.))]
+        y_train = y[train_indices][:int(len(X) * (iter_num/50.))]
 
-    X_test = X[test_indices]
-    y_test = y[test_indices]
-    # train the reusable logisitc regression model on the training data
-    t0 = time.time()
-    lr_sk.fit(X_train,y_train)  # train object
-    y_hat = lr_sk.predict(X_test) # get test set precitions
-    t1 = time.time()
+        X_test = X[test_indices]
+        y_test = y[test_indices]
+        # train the reusable logisitc regression model on the training data
+        t0 = time.time()
+        lr_sk.fit(X_train,y_train)  # train object
+        y_hat = lr_sk.predict(X_test) # get test set precitions
+        t1 = time.time()
 
-    total_scikit = t1-t0
-    scikit_time.append(total_scikit)
-
-
-    # now let's get the accuracy and confusion matrix for this iterations of training/testing
-    acc = mt.accuracy_score(y_test,y_hat)
-    conf = mt.confusion_matrix(y_test,y_hat)
-    print("====Iteration",iter_num," ====")
-    print(f"Scikit accuracy {acc};  time: {total_scikit}" )
-    # print("confusion matrix\n",conf)
-    scikit_acc.append(acc)
+        total_scikit = t1-t0
+        scikit_time.append(total_scikit)
 
 
-    t0 = time.time()
-    lr_clf.fit(X_train,y_train)  # train object
-    y_hat = lr_clf.predict(X_test) # get test set precitions
-    t1 = time.time()
-    total_clf = t1-t0
-    stoch_time.append(total_clf)
-
-    # now let's get the accuracy and confusion matrix for this iterations of training/testing
-    acc = mt.accuracy_score(y_test,y_hat)
-    conf = mt.confusion_matrix(y_test,y_hat)
-    print(f"Stochasitic Org accuracy {acc}; time: {total_clf}" )
-    # print("confusion matrix\n",conf)
-    stoch_acc.append(acc)
+        # now let's get the accuracy and confusion matrix for this iterations of training/testing
+        acc = mt.accuracy_score(y_test,y_hat)
+        conf = mt.confusion_matrix(y_test,y_hat)
+        print("====Iteration",iter_num," ====")
+        print(f"Scikit accuracy {acc};  time: {total_scikit}" )
+        # print("confusion matrix\n",conf)
+        scikit_acc.append(acc)
 
 
-    iter_num+=1
+        t0 = time.time()
+        lr_clf.fit(X_train,y_train)  # train object
+        y_hat = lr_clf.predict(X_test) # get test set precitions
+        t1 = time.time()
+        total_clf = t1-t0
+        stoch_time.append(total_clf)
+
+        # now let's get the accuracy and confusion matrix for this iterations of training/testing
+        acc = mt.accuracy_score(y_test,y_hat)
+        conf = mt.confusion_matrix(y_test,y_hat)
+        print(f"Stochasitic Org accuracy {acc}; time: {total_clf}" )
+        # print("confusion matrix\n",conf)
+        stoch_acc.append(acc)
+
+
+        iter_num+=1
+
+
+n = 50
+stoch_time = [stoch_time[i:i + n] for i in range(0, len(stoch_time), n)]
+stoch_time = np.mean(stoch_time, axis=1)
+
+scikit_time = [scikit_time[i:i + n] for i in range(0, len(scikit_time), n)]
+scikit_time = np.mean(scikit_time, axis=1)
+
+stoch_acc = [stoch_acc[i:i + n] for i in range(0, len(stoch_acc), n)]
+stoch_acc = np.mean(stoch_acc, axis=1)
+
+scikit_acc = [scikit_acc[i:i + n] for i in range(0, len(scikit_acc), n)]
+scikit_acc = np.mean(scikit_acc, axis=1)
+
 
 print(f"Stochasitic Org accuracy {np.average(stoch_acc)}; time: {np.average(stoch_time)}" )
 print(f"Scikit Org accuracy {np.average(scikit_acc)}; time: {np.average(scikit_time)}" )
+
+x = stoch_acc
+y = stoch_time
+plt.plot(y, x)
+plt.ylabel('stoch acc %')
+plt.xlabel('stoch time')
+plt.title('Stochastic')
+plt.show()
+
+x = scikit_acc
+y = scikit_time
+plt.plot(y, x)
+plt.ylabel('scikit acc %')
+plt.xlabel('scikit time')
+plt.title('Scikit')
+plt.show()
+
 
 objects = ('Stoch Accuracy', 'Scikit Accuracy')
 y_pos = np.arange(len(objects))
