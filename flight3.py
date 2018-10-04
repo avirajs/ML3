@@ -100,6 +100,24 @@ y = columns
 temp_df = pd.get_dummies(cleaned_df.airline,prefix='airline')
 cleaned_df = pd.concat((cleaned_df,temp_df),axis=1)
 
+cleaned_df['DepDelayGroup'] = cleaned_df['DepDelayGroup'].replace("Delay < -15 minutes","Early")
+cleaned_df['DepDelayGroup'] = cleaned_df['DepDelayGroup'].replace("Delay between -15 and -1 minutes","Early")
+cleaned_df['DepDelayGroup'] = cleaned_df['DepDelayGroup'].replace("Delay between 15 to 29 minutes","Delay greater than 15 minutes")
+cleaned_df['DepDelayGroup'] = cleaned_df['DepDelayGroup'].replace("Delay between 30 to 44 minutes","Delay greater than 15 minutes")
+cleaned_df['DepDelayGroup'] = cleaned_df['DepDelayGroup'].replace("Delay between 45 to 59 minutes","Delay greater than 15 minutes")
+cleaned_df['DepDelayGroup'] = cleaned_df['DepDelayGroup'].replace("Delay between 60 to 74 minutes","Delay greater than 15 minutes")
+cleaned_df['DepDelayGroup'] = cleaned_df['DepDelayGroup'].replace("Delay between 75 to 89 minutes","Delay greater than 15 minutes")
+cleaned_df['DepDelayGroup'] = cleaned_df['DepDelayGroup'].replace("Delay between 90 to 104 minutes","Delay greater than 15 minutes")
+cleaned_df['DepDelayGroup'] = cleaned_df['DepDelayGroup'].replace("Delay between 105 to 119 minutes","Delay greater than 15 minutes")
+cleaned_df['DepDelayGroup'] = cleaned_df['DepDelayGroup'].replace("Delay between 120 to 134 minutes","Delay greater than 15 minutes")
+cleaned_df['DepDelayGroup'] = cleaned_df['DepDelayGroup'].replace("Delay between 135 to 149 minutes","Delay greater than 15 minutes")
+cleaned_df['DepDelayGroup'] = cleaned_df['DepDelayGroup'].replace("Delay between 150 to 164 minutes","Delay greater than 15 minutes")
+cleaned_df['DepDelayGroup'] = cleaned_df['DepDelayGroup'].replace("Delay between 165 to 179 minutes","Delay greater than 15 minutes")
+cleaned_df['DepDelayGroup'] = cleaned_df['DepDelayGroup'].replace("Delay >= 180 minutes","Delay greater than 15 minutes")
+
+
+
+
 if 'airline' in cleaned_df:
     del cleaned_df['airline'] # get rid of the original category as it is now one-hot encoded
 #cleaned_df.head()
@@ -142,6 +160,10 @@ if 'DepDelayGroupA' in cleaned_df:
     #    have converted them into simple matrices to use with scikit learn
 print(X)
 print(y)
+
+#use random over sampling to valance the DivActualElapsedTime
+
+
 # to use the cross validation object in scikit learn, we need to grab an instance
 #    of the object and set it up. This object will be able to split our data into
 #    training and testing splits
@@ -153,14 +175,30 @@ cv_object = ShuffleSplit(
 print( cv_object.split(X,y))
 # the indices are the rows used for training and testing in each iteration
 
-X_train, y_train, X_test, y_test = ([] for i in range(4))
+X_trainOrig, X_train, y_trainOrig, y_train, X_test, y_test = ([] for i in range(6))
+
+#check to see if the data is imablanced
+from collections import Counter
+
+#data is imbalanced
+print(sorted(Counter(y).items()))
+
+
+
 
 for train_indices, test_indices in cv_object.split(X,y):
     # I will create new variables here so that it is more obvious what
     # the code is doing (you can compact this syntax and avoid duplicating memory,
     # but it makes this code less readable)
-    X_train = X[train_indices]
-    y_train = y[train_indices]
+    X_trainOrig = X[train_indices]
+    y_trainOrig = y[train_indices]
+    #use random oversamping for the training dataset
+    from imblearn.over_sampling import RandomOverSampler
+    ros = RandomOverSampler(random_state=0)
+    X_resampled, y_resampled = ros.fit_sample(X_trainOrig, y_trainOrig)
+    print(sorted(Counter(y_resampled).items()))
+    X_train = X_resampled
+    y_train = y_resampled
 
     X_test = X[test_indices]
     y_test = y[test_indices]
@@ -170,7 +208,7 @@ for train_indices, test_indices in cv_object.split(X,y):
 # a ration of 80:20 would be great for our dataset because it is neither too small nor too bigself.
 # an average dataset like this one would not need more than 20% of data as testing because 362 is already enough to capture most of the variation
 #  But also since our data is not computationally expensive the test data does not need to be less than 20% either
-
+print(sorted(Counter(y_train).items()))
 from sklearn import metrics as mt
 
 # first we create a reusable logisitic regression object
@@ -362,7 +400,7 @@ def getCArray(beginC, endC, stepSize):
     for i in np.arange(beginC, endC, stepSize).tolist():
         cArr.append(i)
     return cArr
-
+cmArr = []
 def find_best_C(beginC, endC, stepSize, X_train, y_train,X_test,y_test, regression):
     accuracyArr = []
     for i in np.arange(beginC, endC, stepSize).tolist():
@@ -395,6 +433,7 @@ def find_best_C(beginC, endC, stepSize, X_train, y_train,X_test,y_test, regressi
         y_hat = lr.predict(X_test) # get test set precitions
         acc = mt.accuracy_score(y_test,y_hat)
         accuracyArr.append(acc)
+        cmArr.append(metrics.confusion_matrix(y_test, y_hat))
     return accuracyArr
 
 
@@ -404,6 +443,7 @@ cList = [0.001,1,0.01]
 i = 0
 bestC = []
 bestAccuracyScore = []
+bestCM = []
 for r in regList:
     regArr = find_best_C(beginC = cList[0], endC = cList[1], stepSize = cList[2], X_train = X_train, y_train = y_train, X_test = X_test,y_test = y_test, regression = r)
     cArr = getCArray(beginC = cList[0], endC = cList[1], stepSize = cList[2])
@@ -417,59 +457,37 @@ for r in regList:
     bestAccuracyScore.append(max(regArr))
     c_value_index = regArr.index(max(regArr))
     bestC.append(cArr[c_value_index])
+    bestCM.append(cmArr[c_value_index])
     print("c value: ", cArr[c_value_index])
+    cmArr = []
     i+=1
+
 
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn import metrics
-def best_c_confusion( X_train, y_train,X_test,y_test, regression, Cvalue, i):
-    #Choose the optimization and the L term
-    if (regression == "lr_steep0"):
-            lr = LogisticRegression(eta=0.1, C = Cvalue )
-    elif (regression == "lr_steep1"):
-        lr = LogisticRegression(eta=0.1,C = Cvalue,reg_choice = "l1")
-    elif (regression == "lr_steep2"):
-        lr = LogisticRegression(eta=0.1, C = Cvalue, reg_choice = "l2")
-    elif (regression == "lr_steepb"):
-        lr = LogisticRegression(eta=0.1, C= Cvalue, reg_choice = "both")
-    elif (regression == "lr_scho0"):
-        lr = LogisticRegression(eta=0.1,iterations=1500,C = Cvalue, optChoice = 'stochastic')
-    elif (regression == "lr_scho1"):
-        lr = LogisticRegression(eta=0.1,iterations=1500, C = Cvalue, optChoice = 'stochastic',reg_choice = "l1")
-    elif (regression == "lr_scho2"):
-        lr = LogisticRegression(eta=0.1,iterations=1500, C = Cvalue, optChoice = 'stochastic',reg_choice = "l2")
-    elif (regression == "lr_schob"):
-        lr = LogisticRegression(eta=0.1,iterations=1500, C = Cvalue, optChoice = 'stochastic',reg_choice = "both")
-    elif (regression == "lr_nh0"):
-        lr = LogisticRegression(eta=0.1,iterations=1, C = Cvalue, optChoice = 'newtonHessian')
-    elif (regression == "lr_nh1"):
-        lr = LogisticRegression(eta=0.1,iterations=1, C = Cvalue, optChoice = 'newtonHessian',reg_choice = "l1")
-    elif (regression == "lr_nh2"):
-        lr = LogisticRegression(eta=0.1,iterations=1, C = Cvalue, optChoice = 'newtonHessian',reg_choice = "l2")
-    elif (regression == "lr_nhb"):
-        lr = LogisticRegression(eta=0.1,iterations=1, C = Cvalue, optChoice = 'newtonHessian',reg_choice = "both")
-    lr.fit(X_train,y_train)  # train object
-    y_hat = lr.predict(X_test) # get test set precitions
-    cm = metrics.confusion_matrix(y_test, y_hat)
-    acc = mt.accuracy_score(y_test,y_hat)
-    plt.figure(figsize=(15,15))
-    sns.heatmap(cm, annot=True, fmt=".3f", linewidths=.5, square = True, cmap = 'Blues_r');
-    plt.ylabel('Actual label');
-    plt.xlabel('Predicted label');
+def best_c_confusion(i):
+
+    cm = bestCM[i]
+    acc = bestAccuracyScore[i]
+    plt.figure(figsize=(10,5))
+    sns.heatmap(cm, annot=True, fmt=".3f", linewidths=.5, square = True, cmap = 'Blues_r')
+    plt.ylabel('Actual label')
+    plt.xlabel('Predicted label')
     all_sample_title = regListName[i] + 'Accuracy Score: {0}'.format(acc)
-    plt.title(all_sample_title, size = 15);
+    plt.title(all_sample_title, size = 15)
+    plt.show()
 
 #show confusion matrix for each method
 i = 0
 for r in regList:
-    best_c_confusion(X_train = X_train, y_train = y_train, X_test = X_test,y_test = y_test, regression = r, Cvalue = bestC[i], i = i)
+    best_c_confusion(i)
     i+=1
 
 
 def plot_confusion_scikit(y,yhat):
     cm = metrics.confusion_matrix(y, yhat)
-    plt.figure(figsize=(15,15))
+    plt.figure(figsize=(10,5))
     sns.heatmap(cm, annot=True, fmt=".3f", linewidths=.5, square = True, cmap = 'Blues_r')
     plt.ylabel('Actual label')
     plt.xlabel('Predicted label')
@@ -480,11 +498,11 @@ def plot_confusion_scikit(y,yhat):
 from sklearn.linear_model import LogisticRegression as SKLogisticRegression
 from sklearn.metrics import accuracy_score
 lr_sk = SKLogisticRegression() # all params default
-lr_sk.fit(X,y)
-yhat = lr_sk.predict(X)
-print('Accuracy of: ',accuracy_score(y,yhat))
+lr_sk.fit(X_train,y_train)
+yhat = lr_sk.predict(X_test)
+print('Accuracy of: ',accuracy_score(y_test,yhat))
 #show confusion matrix for scikit learn
-plot_confusion_scikit(y,yhat)
-#show confusion matrix and accuracy score for best regression 
+plot_confusion_scikit(y_test,yhat)
+#show confusion matrix and accuracy score for best regression
 i = bestAccuracyScore.index(max(bestAccuracyScore))
-best_c_confusion(X_train = X_train, y_train = y_train, X_test = X ,y_test = y, regression = regList[i], Cvalue = bestC[i], i = 7)
+best_c_confusion(i)
